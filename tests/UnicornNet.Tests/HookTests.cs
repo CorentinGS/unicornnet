@@ -224,6 +224,50 @@ public sealed class HookTests
         Assert.Equal("sys", observed);
     }
 
+    [Fact]
+    public void ControlCommand_RecordsTypedInvocation()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        var command = Unicorn.ControlCommand.Read(Unicorn.ControlType.EngineMode, 1);
+        nint argument = 1234;
+        unicorn.Control(command, argument);
+
+        Assert.True(native.LastControl.HasValue);
+        Assert.Equal(command.Value, native.LastControl.Value.Control);
+        Assert.Equal(new[] { argument }, native.LastControl.Value.Arguments);
+    }
+
+    [Fact]
+    public void Control_TypeOverload_InfersArgumentCount()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        nint ptr = 5678;
+        unicorn.Control(Unicorn.ControlType.PageSize, Unicorn.ControlIo.Read, ptr);
+
+        var expected = Unicorn.ControlCommand.Read(Unicorn.ControlType.PageSize, 1);
+        Assert.True(native.LastControl.HasValue);
+        Assert.Equal(expected.Value, native.LastControl.Value.Control);
+        Assert.Equal(new[] { ptr }, native.LastControl.Value.Arguments);
+    }
+
+    [Fact]
+    public void ControlNone_IssuesZeroArgumentCommand()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        unicorn.ControlNone(Unicorn.ControlType.TlbFlush);
+
+        var expected = Unicorn.ControlCommand.None(Unicorn.ControlType.TlbFlush, 0);
+        Assert.True(native.LastControl.HasValue);
+        Assert.Equal(expected.Value, native.LastControl.Value.Control);
+        Assert.Empty(native.LastControl.Value.Arguments);
+    }
+
     private sealed class FakeNativeProxy : IUnicornNativeProxy
     {
         private nuint _nextHandle;
@@ -233,6 +277,8 @@ public sealed class HookTests
         public List<nuint> ActiveHooks { get; } = [];
 
         public List<nuint> RemovedHooks { get; } = [];
+
+        public (uint Control, nint[] Arguments)? LastControl { get; private set; }
 
         public int Close(IntPtr engine)
         {
@@ -313,6 +359,16 @@ public sealed class HookTests
             engine = new IntPtr(0x1234);
             return 0;
         }
+
+        public int Control(IntPtr engine, uint control, ReadOnlySpan<nint> arguments)
+        {
+            var args = new nint[arguments.Length];
+            arguments.CopyTo(args);
+            LastControl = (control, args);
+            return 0;
+        }
+
+        public int Errno(IntPtr engine) => 0;
 
         private int RegisterHook(out nuint hookId)
         {

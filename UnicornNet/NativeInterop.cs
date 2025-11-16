@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices;
 
 namespace UnicornNet;
@@ -33,6 +34,8 @@ internal interface IUnicornNativeProxy
     int HookAddInstructionOut(IntPtr engine, Unicorn.HookType hookType, NativeInstructionOutHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId);
     int HookAddInstructionSyscall(IntPtr engine, Unicorn.HookType hookType, NativeSyscallHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId);
     int HookDel(IntPtr engine, nuint hookId);
+    int Control(IntPtr engine, uint control, ReadOnlySpan<nint> arguments);
+    int Errno(IntPtr engine);
 }
 
 internal sealed class NativeUnicornProxy : IUnicornNativeProxy
@@ -115,6 +118,24 @@ internal sealed class NativeUnicornProxy : IUnicornNativeProxy
     public int HookDel(IntPtr engine, nuint hookId)
     {
         return Unicorn.NativeMethods.UcHookDel(engine, hookId);
+    }
+
+    public int Control(IntPtr engine, uint control, ReadOnlySpan<nint> arguments)
+    {
+        return arguments.Length switch
+        {
+            0 => Unicorn.NativeMethods.UcCtl0(engine, control),
+            1 => Unicorn.NativeMethods.UcCtl1(engine, control, arguments[0]),
+            2 => Unicorn.NativeMethods.UcCtl2(engine, control, arguments[0], arguments[1]),
+            3 => Unicorn.NativeMethods.UcCtl3(engine, control, arguments[0], arguments[1], arguments[2]),
+            4 => Unicorn.NativeMethods.UcCtl4(engine, control, arguments[0], arguments[1], arguments[2], arguments[3]),
+            _ => throw new ArgumentOutOfRangeException(nameof(arguments), "uc_ctl supports up to 4 arguments in this binding."),
+        };
+    }
+
+    public int Errno(IntPtr engine)
+    {
+        return Unicorn.NativeMethods.UcErrno(engine);
     }
 }
 

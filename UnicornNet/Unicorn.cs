@@ -130,6 +130,42 @@ public partial class Unicorn : IDisposable
         }
     }
 
+    public void Control(ControlCommand command, params nint[] arguments)
+    {
+        EnsureNotDisposed();
+        var span = arguments ?? [];
+        var err = _native.Control(EngineHandle, command.Value, span);
+        if (err != 0)
+        {
+            throw new InvalidOperationException($"uc_ctl failed: error {err}");
+        }
+    }
+
+    public void Control(ControlType type, ControlIo access, params nint[] arguments)
+    {
+        var args = arguments ?? Array.Empty<nint>();
+        var command = ControlCommand.Create(type, args.Length, access);
+        Control(command, args);
+    }
+
+    public void ControlRead(ControlType type, params nint[] arguments)
+        => Control(type, ControlIo.Read, arguments);
+
+    public void ControlWrite(ControlType type, params nint[] arguments)
+        => Control(type, ControlIo.Write, arguments);
+
+    public void ControlReadWrite(ControlType type, params nint[] arguments)
+        => Control(type, ControlIo.ReadWrite, arguments);
+
+    public void ControlNone(ControlType type)
+        => Control(type, ControlIo.None, []);
+
+    public ErrorCode GetLastError()
+    {
+        EnsureNotDisposed();
+        return (ErrorCode)_native.Errno(EngineHandle);
+    }
+
     public HookHandle AddCodeHook(CodeHook callback, HookRange? range = null, object? state = null)
     {
         return RegisterHook(HookType.Code, callback ?? throw new ArgumentNullException(nameof(callback)), state, range);
@@ -855,5 +891,23 @@ public partial class Unicorn : IDisposable
 
         [LibraryImport("unicorn", EntryPoint = "uc_hook_del")]
         public static partial int UcHookDel(IntPtr engine, nuint hook);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_ctl")]
+        public static partial int UcCtl0(IntPtr engine, uint control);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_ctl")]
+        public static partial int UcCtl1(IntPtr engine, uint control, nint arg0);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_ctl")]
+        public static partial int UcCtl2(IntPtr engine, uint control, nint arg0, nint arg1);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_ctl")]
+        public static partial int UcCtl3(IntPtr engine, uint control, nint arg0, nint arg1, nint arg2);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_ctl")]
+        public static partial int UcCtl4(IntPtr engine, uint control, nint arg0, nint arg1, nint arg2, nint arg3);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_errno")]
+        public static partial int UcErrno(IntPtr engine);
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 
 namespace UnicornNet;
@@ -103,6 +104,76 @@ public partial class Unicorn
         ReadProtected = 23,
         FetchProtected = 24,
         ReadAfter = 25
+    }
+
+    [Flags]
+    public enum ControlIo : uint
+    {
+        None = 0,
+        Write = 1,
+        Read = 2,
+        ReadWrite = Read | Write
+    }
+
+    public enum ControlType : uint
+    {
+        EngineMode = 0,
+        PageSize = 1,
+        Architecture = 2,
+        Timeout = 3,
+        UseExits = 4,
+        ExitCount = 5,
+        Exits = 6,
+        CpuModel = 7,
+        TranslationBlockRequest = 8,
+        TranslationBlockRemove = 9,
+        TranslationBlockFlush = 10,
+        TlbFlush = 11,
+        TlbType = 12,
+        TcgBufferSize = 13,
+        ContextMode = 14
+    }
+
+    public readonly record struct ControlCommand(uint Value)
+    {
+        private const int ArgumentCountShift = 26;
+        private const int IoShift = 30;
+        private const uint TypeMask = (1u << ArgumentCountShift) - 1;
+        private const uint ArgumentMask = 0xFu;
+        private const uint IoMask = 0x3u;
+
+        public ControlType Type => (ControlType)(Value & TypeMask);
+
+        public int ArgumentCount => (int)((Value >> ArgumentCountShift) & ArgumentMask);
+
+        public ControlIo Access => (ControlIo)((Value >> IoShift) & IoMask);
+
+        public static ControlCommand Create(ControlType type, int argumentCount, ControlIo access)
+        {
+            if ((uint)argumentCount > ArgumentMask)
+            {
+                throw new ArgumentOutOfRangeException(nameof(argumentCount), "Argument count must be between 0 and 15.");
+            }
+
+            var value = (uint)type;
+            value |= ((uint)argumentCount & ArgumentMask) << ArgumentCountShift;
+            value |= ((uint)access & IoMask) << IoShift;
+            return new ControlCommand(value);
+        }
+
+        public static ControlCommand None(ControlType type, int argumentCount)
+            => Create(type, argumentCount, ControlIo.None);
+
+        public static ControlCommand Read(ControlType type, int argumentCount)
+            => Create(type, argumentCount, ControlIo.Read);
+
+        public static ControlCommand Write(ControlType type, int argumentCount)
+            => Create(type, argumentCount, ControlIo.Write);
+
+        public static ControlCommand ReadWrite(ControlType type, int argumentCount)
+            => Create(type, argumentCount, ControlIo.ReadWrite);
+
+        public static implicit operator ControlCommand(uint value) => new(value);
     }
 
     [Flags]
