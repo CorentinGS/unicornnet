@@ -19,11 +19,11 @@ public partial class Unicorn
     private sealed class HookRegistration : IDisposable
     {
         private readonly Delegate _callback;
-        private GCHandle _gcHandle;
         private readonly Unicorn _owner;
         private readonly object? _state;
         private readonly HookType _type;
         private bool _disposed;
+        private GCHandle _gcHandle;
 
         public HookRegistration(Unicorn owner, HookType type, HookCategory category, Delegate callback, object? state, MemoryAccessType? accessType = null)
         {

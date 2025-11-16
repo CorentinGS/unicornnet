@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.InteropServices;
 
 namespace UnicornNet;
@@ -129,7 +128,7 @@ internal sealed class NativeUnicornProxy : IUnicornNativeProxy
             2 => Unicorn.NativeMethods.UcCtl2(engine, control, arguments[0], arguments[1]),
             3 => Unicorn.NativeMethods.UcCtl3(engine, control, arguments[0], arguments[1], arguments[2]),
             4 => Unicorn.NativeMethods.UcCtl4(engine, control, arguments[0], arguments[1], arguments[2], arguments[3]),
-            _ => throw new ArgumentOutOfRangeException(nameof(arguments), "uc_ctl supports up to 4 arguments in this binding."),
+            _ => throw new ArgumentOutOfRangeException(nameof(arguments), "uc_ctl supports up to 4 arguments in this binding.")
         };
     }
 

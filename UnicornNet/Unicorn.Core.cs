@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 namespace UnicornNet;
 
 public partial class Unicorn : IDisposable
@@ -10,11 +8,6 @@ public partial class Unicorn : IDisposable
 
     public Unicorn(Architecture architecture, Mode mode)
         : this(architecture, mode, NativeUnicornProxy.Instance)
-    {
-    }
-
-    public Unicorn(int architecture, int mode)
-        : this((Architecture)architecture, (Mode)mode)
     {
     }
 
@@ -79,16 +72,24 @@ public partial class Unicorn : IDisposable
     }
 
     public void ControlRead(ControlType type, params nint[] arguments)
-        => Control(type, ControlIo.Read, arguments);
+    {
+        Control(type, ControlIo.Read, arguments);
+    }
 
     public void ControlWrite(ControlType type, params nint[] arguments)
-        => Control(type, ControlIo.Write, arguments);
+    {
+        Control(type, ControlIo.Write, arguments);
+    }
 
     public void ControlReadWrite(ControlType type, params nint[] arguments)
-        => Control(type, ControlIo.ReadWrite, arguments);
+    {
+        Control(type, ControlIo.ReadWrite, arguments);
+    }
 
     public void ControlNone(ControlType type)
-        => Control(type, ControlIo.None, []);
+    {
+        Control(type, ControlIo.None);
+    }
 
     public ErrorCode GetLastError()
     {
