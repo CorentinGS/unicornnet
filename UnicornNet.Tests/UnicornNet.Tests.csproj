@@ -13,6 +13,6 @@
         </PackageReference>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\UnicornNet\UnicornNet.csproj"/>
+        <ProjectReference Include="..\UnicornNet\UnicornNet.csproj"/>
     </ItemGroup>
 </Project>

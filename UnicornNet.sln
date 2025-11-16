@@ -1,10 +1,10 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnicornNet", "UnicornNet\UnicornNet.csproj", "{B2684BF9-8CB8-4A3C-AE2E-A9903410D33B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnicornNet.Tests", "tests\UnicornNet.Tests\UnicornNet.Tests.csproj", "{D6A826BF-DA8C-4D31-8E42-CDE7F94B207F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnicornNet.Tests", "UnicornNet.Tests\UnicornNet.Tests.csproj", "{D6A826BF-DA8C-4D31-8E42-CDE7F94B207F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicorn-Demo", "Unicorn-Demo\Unicorn-Demo.csproj", "{5C9C8369-BA90-433D-83E9-D16E7D0BB615}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnicornNet.Demo", "UnicornNet.Demo\UnicornNet.Demo.csproj", "{5C9C8369-BA90-433D-83E9-D16E7D0BB615}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
