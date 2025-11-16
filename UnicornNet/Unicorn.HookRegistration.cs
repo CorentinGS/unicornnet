@@ -27,10 +27,11 @@ public partial class Unicorn
 
         public HookRegistration(Unicorn owner, HookType type, HookCategory category, Delegate callback, object? state, MemoryAccessType? accessType = null)
         {
+            ArgumentNullException.ThrowIfNull(callback);
             _owner = owner;
             _type = type;
             Category = category;
-            _callback = callback ?? throw new ArgumentNullException(nameof(callback));
+            _callback = callback;
             _state = state;
             AccessType = accessType;
             _gcHandle = GCHandle.Alloc(this, GCHandleType.Normal);

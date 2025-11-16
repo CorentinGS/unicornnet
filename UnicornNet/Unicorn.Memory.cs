@@ -2,13 +2,22 @@ namespace UnicornNet;
 
 public partial class Unicorn
 {
+    /// <summary>
+    /// Map a memory region and return a MemoryRegion helper for managing it
+    /// </summary>
+    public MemoryRegion MapRegion(ulong address, ulong size, MemoryPermissions permissions)
+    {
+        MemMap(address, size, permissions);
+        return new MemoryRegion(this, address, size, permissions);
+    }
+
     public void MemMap(ulong address, ulong size, MemoryPermissions permissions)
     {
         EnsureNotDisposed();
         var err = _native.MemMap(EngineHandle, address, size, (uint)permissions);
         if (err != 0)
         {
-            throw new InvalidOperationException($"uc_mem_map failed: error {err}");
+            throw new UnicornMemoryException((ErrorCode)err, "uc_mem_map", address, size);
         }
     }
 
@@ -23,7 +32,7 @@ public partial class Unicorn
         var err = _native.MemUnmap(EngineHandle, address, size);
         if (err != 0)
         {
-            throw new InvalidOperationException($"uc_mem_unmap failed: error {err}");
+            throw new UnicornMemoryException((ErrorCode)err, "uc_mem_unmap", address, size);
         }
     }
 
@@ -33,7 +42,7 @@ public partial class Unicorn
         var err = _native.MemProtect(EngineHandle, address, size, (uint)permissions);
         if (err != 0)
         {
-            throw new InvalidOperationException($"uc_mem_protect failed: error {err}");
+            throw new UnicornMemoryException((ErrorCode)err, "uc_mem_protect", address, size);
         }
     }
 
@@ -48,7 +57,7 @@ public partial class Unicorn
         var err = _native.MemWrite(EngineHandle, address, data);
         if (err != 0)
         {
-            throw new InvalidOperationException($"uc_mem_write failed: error {err}");
+            throw new UnicornMemoryException((ErrorCode)err, "uc_mem_write", address, (ulong)data.Length);
         }
     }
 
@@ -58,7 +67,7 @@ public partial class Unicorn
         var err = _native.MemRead(EngineHandle, address, buffer);
         if (err != 0)
         {
-            throw new InvalidOperationException($"uc_mem_read failed: error {err}");
+            throw new UnicornMemoryException((ErrorCode)err, "uc_mem_read", address, (ulong)buffer.Length);
         }
     }
 }

@@ -145,7 +145,8 @@ internal sealed class SafeEngineHandle : SafeHandle
     public SafeEngineHandle(IntPtr preexistingHandle, IUnicornNativeProxy native)
         : base(IntPtr.Zero, true)
     {
-        _native = native ?? throw new ArgumentNullException(nameof(native));
+        ArgumentNullException.ThrowIfNull(native);
+        _native = native;
         SetHandle(preexistingHandle);
     }
 

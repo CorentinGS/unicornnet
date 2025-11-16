@@ -1,10 +1,11 @@
+using System.Collections.Concurrent;
+
 namespace UnicornNet;
 
 public partial class Unicorn
 {
-    private readonly Dictionary<MemoryAccessType, HashSet<nuint>> _eventMemRegistrations = [];
-    private readonly ReaderWriterLockSlim _hookLock = new(LockRecursionPolicy.NoRecursion);
-    private readonly Dictionary<nuint, HookRegistration> _hookRegistry = [];
+    private readonly ConcurrentDictionary<MemoryAccessType, ConcurrentDictionary<nuint, byte>> _eventMemRegistrations = new();
+    private readonly ConcurrentDictionary<nuint, HookRegistration> _hookRegistry = new();
 
     internal bool TrySimulateHook(HookHandle handle, ulong address, int size)
     {
@@ -34,32 +35,16 @@ public partial class Unicorn
 
     internal bool TrySimulateEventMem(MemoryAccessType accessType, ulong address, int size, long value)
     {
-        List<HookRegistration> registrations;
-        _hookLock.EnterReadLock();
-        try
+        if (!_eventMemRegistrations.TryGetValue(accessType, out var handles) || handles.IsEmpty)
         {
-            if (!_eventMemRegistrations.TryGetValue(accessType, out var handles) || handles.Count == 0)
-            {
-                return false;
-            }
-
-            registrations = new List<HookRegistration>(handles.Count);
-            foreach (var handle in handles)
-            {
-                if (_hookRegistry.TryGetValue(handle, out var registration))
-                {
-                    registrations.Add(registration);
-                }
-            }
-        }
-        finally
-        {
-            _hookLock.ExitReadLock();
+            return false;
         }
 
         var invoked = false;
-        foreach (var registration in registrations)
+        foreach (var handleEntry in handles)
         {
+            if (!_hookRegistry.TryGetValue(handleEntry.Key, out var registration))
+                continue;
             invoked = true;
             if (!registration.InvokeEventMemory(accessType, address, size, value))
             {
@@ -235,7 +220,7 @@ public partial class Unicorn
         if (error != 0)
         {
             registration.Dispose();
-            throw new InvalidOperationException($"uc_hook_add failed: error {error}");
+            throw new UnicornHookException((ErrorCode)error, "uc_hook_add");
         }
 
         registration.SetHandle(new HookHandle(handle));
@@ -251,47 +236,18 @@ public partial class Unicorn
     private bool TryGetRegistration(HookHandle handle, out HookRegistration registration)
     {
         registration = null!;
-        if (handle.IsEmpty)
-        {
-            return false;
-        }
-
-        _hookLock.EnterReadLock();
-        try
-        {
-            if (!_hookRegistry.TryGetValue(handle.Value, out var existing))
-                return false;
-
-            registration = existing;
-            return true;
-        }
-        finally
-        {
-            _hookLock.ExitReadLock();
-        }
+        return !handle.IsEmpty && _hookRegistry.TryGetValue(handle.Value, out registration!);
     }
 
     private void AddRegistration(HookRegistration registration)
     {
-        _hookLock.EnterWriteLock();
-        try
-        {
-            _hookRegistry.Add(registration.Handle.Value, registration);
-            if (registration.Category != HookCategory.EventMemory || !registration.AccessType.HasValue)
-                return;
+        _hookRegistry.TryAdd(registration.Handle.Value, registration);
 
-            if (!_eventMemRegistrations.TryGetValue(registration.AccessType.Value, out var handles))
-            {
-                handles = [];
-                _eventMemRegistrations.Add(registration.AccessType.Value, handles);
-            }
+        if (registration.Category != HookCategory.EventMemory || !registration.AccessType.HasValue)
+            return;
 
-            handles.Add(registration.Handle.Value);
-        }
-        finally
-        {
-            _hookLock.ExitWriteLock();
-        }
+        var handles = _eventMemRegistrations.GetOrAdd(registration.AccessType.Value, _ => new ConcurrentDictionary<nuint, byte>());
+        handles.TryAdd(registration.Handle.Value, 0);
     }
 
     private void RemoveEventRegistration(HookRegistration registration)
@@ -301,13 +257,9 @@ public partial class Unicorn
             return;
         }
 
-        if (!_eventMemRegistrations.TryGetValue(registration.AccessType.Value, out var handles))
-            return;
-
-        handles.Remove(registration.Handle.Value);
-        if (handles.Count == 0)
+        if (_eventMemRegistrations.TryGetValue(registration.AccessType.Value, out var handles))
         {
-            _eventMemRegistrations.Remove(registration.AccessType.Value);
+            handles.TryRemove(registration.Handle.Value, out _);
         }
     }
 
@@ -347,28 +299,16 @@ public partial class Unicorn
             return;
         }
 
-        HookRegistration? registration;
-        _hookLock.EnterWriteLock();
-        try
+        if (!_hookRegistry.TryRemove(handle.Value, out var registration))
         {
-            if (_hookRegistry.Remove(handle.Value, out registration))
-            {
-                RemoveEventRegistration(registration);
-            }
-            else if (throwIfMissing)
+            if (throwIfMissing)
             {
                 throw new InvalidOperationException($"Hook {handle} was not registered.");
             }
-        }
-        finally
-        {
-            _hookLock.ExitWriteLock();
-        }
-
-        if (registration is null)
-        {
             return;
         }
+
+        RemoveEventRegistration(registration);
 
         var engine = EngineHandle;
         if (engine != IntPtr.Zero)
@@ -377,7 +317,7 @@ public partial class Unicorn
             if (err != 0)
             {
                 registration.Dispose();
-                throw new InvalidOperationException($"uc_hook_del failed: error {err}");
+                throw new UnicornHookException((ErrorCode)err, "uc_hook_del");
             }
         }
 
@@ -386,18 +326,9 @@ public partial class Unicorn
 
     private void ClearHooks()
     {
-        List<HookRegistration> registrations;
-        _hookLock.EnterWriteLock();
-        try
-        {
-            registrations = [.. _hookRegistry.Values];
-            _hookRegistry.Clear();
-            _eventMemRegistrations.Clear();
-        }
-        finally
-        {
-            _hookLock.ExitWriteLock();
-        }
+        var registrations = _hookRegistry.Values.ToArray();
+        _hookRegistry.Clear();
+        _eventMemRegistrations.Clear();
 
         var engine = EngineHandle;
         foreach (var registration in registrations)

@@ -4,5 +4,6 @@
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=e73bb8dd_002Ddaca_002D4e07_002Db321_002D526c8fc4d71c/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="HookTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;xUnit::D6A826BF-DA8C-4D31-8E42-CDE7F94B207F::net10.0::UnicornNet.Tests.HookTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::D6A826BF-DA8C-4D31-8E42-CDE7F94B207F::net10.0::UnicornNet.Tests.NewFeaturesTests&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
