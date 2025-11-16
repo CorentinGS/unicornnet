@@ -20,6 +20,11 @@ public partial class Unicorn : IDisposable
     {
     }
 
+    public Unicorn(int architecture, int mode)
+        : this((Architecture)architecture, (Mode)mode)
+    {
+    }
+
     internal Unicorn(Architecture architecture, Mode mode, IUnicornNativeProxy native)
     {
         _native = native ?? throw new ArgumentNullException(nameof(native));
@@ -72,6 +77,9 @@ public partial class Unicorn : IDisposable
         }
     }
 
+    public void MemMap(ulong address, ulong size, uint permissions)
+        => MemMap(address, size, (MemoryPermissions)permissions);
+
     public void MemUnmap(ulong address, ulong size)
     {
         EnsureNotDisposed();
@@ -91,6 +99,9 @@ public partial class Unicorn : IDisposable
             throw new InvalidOperationException($"uc_mem_protect failed: error {err}");
         }
     }
+
+    public void MemProtect(ulong address, ulong size, uint permissions)
+        => MemProtect(address, size, (MemoryPermissions)permissions);
 
     public void MemWrite(ulong address, ReadOnlySpan<byte> data)
     {

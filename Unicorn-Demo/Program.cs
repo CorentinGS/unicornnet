@@ -1,5 +1,3 @@
-using System;
-using System;
 using System.Reflection;
 using UnicornNet;
 
@@ -40,18 +38,15 @@ unicorn.HookDel(hookHandle);
 Console.WriteLine("[hook] Demo hook removed.");
 
 Console.WriteLine("=== Demo complete ===");
+return;
 
 static string FormatBytes(ReadOnlySpan<byte> bytes) => BitConverter.ToString(bytes.ToArray());
 
 static bool TriggerHookForDemo(Unicorn unicorn, Unicorn.HookHandle handle, ulong address, int size)
 {
-    const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
-    var method = typeof(Unicorn).GetMethod("TrySimulateHook", Flags);
-    if (method is null)
-    {
-        return false;
-    }
+    const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+    var method = typeof(Unicorn).GetMethod("TrySimulateHook", flags);
 
-    var result = method.Invoke(unicorn, new object[] { handle, address, size });
-    return result is bool success && success;
+    var result = method?.Invoke(unicorn, [handle, address, size]);
+    return result is bool and true;
 }
