@@ -1,9 +1,20 @@
-namespace UnicornNet;
-
-using System;
 using System.Runtime.InteropServices;
 
+namespace UnicornNet;
+
 public delegate void NativeHookCallback(IntPtr engine, ulong address, uint size, IntPtr userData);
+
+public delegate void NativeMemHookCallback(IntPtr engine, uint accessType, ulong address, int size, long value, IntPtr userData);
+
+public delegate bool NativeEventMemHookCallback(IntPtr engine, uint accessType, ulong address, int size, long value, IntPtr userData);
+
+public delegate void NativeInterruptHookCallback(IntPtr engine, uint interruptNumber, IntPtr userData);
+
+public delegate uint NativeInstructionInHookCallback(IntPtr engine, uint port, int size, IntPtr userData);
+
+public delegate void NativeInstructionOutHookCallback(IntPtr engine, uint port, int size, uint value, IntPtr userData);
+
+public delegate void NativeSyscallHookCallback(IntPtr engine, IntPtr userData);
 
 internal interface IUnicornNativeProxy
 {
@@ -15,50 +26,96 @@ internal interface IUnicornNativeProxy
     int MemWrite(IntPtr engine, ulong address, ReadOnlySpan<byte> data);
     int MemRead(IntPtr engine, ulong address, Span<byte> buffer);
     int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
+    int HookAddMem(IntPtr engine, Unicorn.HookType hookType, NativeMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
+    int HookAddEventMem(IntPtr engine, Unicorn.HookType hookType, NativeEventMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
+    int HookAddInterrupt(IntPtr engine, Unicorn.HookType hookType, NativeInterruptHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
+    int HookAddInstructionIn(IntPtr engine, Unicorn.HookType hookType, NativeInstructionInHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId);
+    int HookAddInstructionOut(IntPtr engine, Unicorn.HookType hookType, NativeInstructionOutHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId);
+    int HookAddInstructionSyscall(IntPtr engine, Unicorn.HookType hookType, NativeSyscallHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId);
     int HookDel(IntPtr engine, nuint hookId);
 }
 
 internal sealed class NativeUnicornProxy : IUnicornNativeProxy
 {
-    public static NativeUnicornProxy Instance { get; } = new();
-
     private NativeUnicornProxy()
     {
     }
+    public static NativeUnicornProxy Instance { get; } = new();
 
-    public int Open(int architecture, int mode, out IntPtr engine) => Unicorn.NativeMethods.UcOpen(architecture, mode, out engine);
+    public int Open(int architecture, int mode, out IntPtr engine)
+    {
+        return Unicorn.NativeMethods.UcOpen(architecture, mode, out engine);
+    }
 
-    public int Close(IntPtr engine) => Unicorn.NativeMethods.UcClose(engine);
+    public int Close(IntPtr engine)
+    {
+        return Unicorn.NativeMethods.UcClose(engine);
+    }
 
-    public int MemMap(IntPtr engine, ulong address, ulong size, uint permissions) => Unicorn.NativeMethods.UcMemMap(engine, address, size, permissions);
+    public int MemMap(IntPtr engine, ulong address, ulong size, uint permissions)
+    {
+        return Unicorn.NativeMethods.UcMemMap(engine, address, size, permissions);
+    }
 
-    public int MemUnmap(IntPtr engine, ulong address, ulong size) => Unicorn.NativeMethods.UcMemUnmap(engine, address, size);
+    public int MemUnmap(IntPtr engine, ulong address, ulong size)
+    {
+        return Unicorn.NativeMethods.UcMemUnmap(engine, address, size);
+    }
 
-    public int MemProtect(IntPtr engine, ulong address, ulong size, uint permissions) => Unicorn.NativeMethods.UcMemProtect(engine, address, size, permissions);
+    public int MemProtect(IntPtr engine, ulong address, ulong size, uint permissions)
+    {
+        return Unicorn.NativeMethods.UcMemProtect(engine, address, size, permissions);
+    }
 
     public int MemWrite(IntPtr engine, ulong address, ReadOnlySpan<byte> data)
     {
-        if (data.IsEmpty)
-        {
-            return 0;
-        }
-
-        return Unicorn.NativeMethods.UcMemWrite(engine, address, ref MemoryMarshal.GetReference(data), (nuint)data.Length);
+        return data.IsEmpty ? 0 : Unicorn.NativeMethods.UcMemWrite(engine, address, ref MemoryMarshal.GetReference(data), (nuint)data.Length);
     }
 
     public int MemRead(IntPtr engine, ulong address, Span<byte> buffer)
     {
-        if (buffer.IsEmpty)
-        {
-            return 0;
-        }
-
-        return Unicorn.NativeMethods.UcMemRead(engine, address, ref MemoryMarshal.GetReference(buffer), (nuint)buffer.Length);
+        return buffer.IsEmpty ? 0 : Unicorn.NativeMethods.UcMemRead(engine, address, ref MemoryMarshal.GetReference(buffer), (nuint)buffer.Length);
     }
 
-    public int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId) => Unicorn.NativeMethods.UcHookAdd(engine, out hookId, (uint)hookType, callback, userData, begin, end);
+    public int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookAdd(engine, out hookId, (uint)hookType, callback, userData, begin, end);
+    }
 
-    public int HookDel(IntPtr engine, nuint hookId) => Unicorn.NativeMethods.UcHookDel(engine, hookId);
+    public int HookAddMem(IntPtr engine, Unicorn.HookType hookType, NativeMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookAddMem(engine, out hookId, (uint)hookType, callback, userData, begin, end);
+    }
+
+    public int HookAddEventMem(IntPtr engine, Unicorn.HookType hookType, NativeEventMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookAddEventMem(engine, out hookId, (uint)hookType, callback, userData, begin, end);
+    }
+
+    public int HookAddInterrupt(IntPtr engine, Unicorn.HookType hookType, NativeInterruptHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookAddInterrupt(engine, out hookId, (uint)hookType, callback, userData, begin, end);
+    }
+
+    public int HookAddInstructionIn(IntPtr engine, Unicorn.HookType hookType, NativeInstructionInHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookAddInstructionIn(engine, out hookId, (uint)hookType, callback, userData, begin, end, instructionId);
+    }
+
+    public int HookAddInstructionOut(IntPtr engine, Unicorn.HookType hookType, NativeInstructionOutHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookAddInstructionOut(engine, out hookId, (uint)hookType, callback, userData, begin, end, instructionId);
+    }
+
+    public int HookAddInstructionSyscall(IntPtr engine, Unicorn.HookType hookType, NativeSyscallHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookAddInstructionSyscall(engine, out hookId, (uint)hookType, callback, userData, begin, end, instructionId);
+    }
+
+    public int HookDel(IntPtr engine, nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookDel(engine, hookId);
+    }
 }
 
 internal sealed class SafeEngineHandle : SafeHandle
@@ -72,7 +129,10 @@ internal sealed class SafeEngineHandle : SafeHandle
         SetHandle(preexistingHandle);
     }
 
-    public override bool IsInvalid => handle == IntPtr.Zero;
+    public override bool IsInvalid
+    {
+        get => handle == IntPtr.Zero;
+    }
 
     protected override bool ReleaseHandle()
     {

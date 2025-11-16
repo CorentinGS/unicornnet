@@ -1,32 +1,24 @@
-namespace UnicornNet;
-
-using System;
 using System.Globalization;
+
+namespace UnicornNet;
 
 public partial class Unicorn
 {
-    private const ulong DefaultHookBegin = 1;
-    private const ulong DefaultHookEnd = 0;
+    public delegate void BlockHook(Unicorn engine, ulong address, int size, object? state);
 
     public delegate void CodeHook(Unicorn engine, ulong address, int size, object? state);
-    public delegate void BlockHook(Unicorn engine, ulong address, int size, object? state);
-    public readonly record struct HookRange(ulong Begin, ulong End)
-    {
-        public static HookRange All
-        {
-            get => new(DefaultHookBegin, DefaultHookEnd);
-        }
-    }
 
-    public readonly record struct HookHandle(nuint Value)
-    {
-        public bool IsEmpty
-        {
-            get => Value == 0;
-        }
+    public delegate uint InHook(Unicorn engine, uint port, int size, object? state);
 
-        public override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
-    }
+    public delegate void InterruptHook(Unicorn engine, uint interruptNumber, object? state);
+
+    public delegate bool MemoryEventHook(Unicorn engine, MemoryAccessType accessType, ulong address, int size, long value, object? state);
+
+    public delegate void MemoryHook(Unicorn engine, MemoryAccessType accessType, ulong address, int size, long value, object? state);
+
+    public delegate void OutHook(Unicorn engine, uint port, int size, uint value, object? state);
+
+    public delegate void SyscallHook(Unicorn engine, object? state);
 
     public enum Architecture : uint
     {
@@ -39,7 +31,88 @@ public partial class Unicorn
         M68K = 7,
         RiscV = 8,
         S390X = 9,
-        TriCore = 10,
+        TriCore = 10
+    }
+
+    public enum ErrorCode
+    {
+        Ok = 0,
+        NoMem = 1,
+        Arch = 2,
+        Handle = 3,
+        Mode = 4,
+        Version = 5,
+        ReadUnmapped = 6,
+        WriteUnmapped = 7,
+        FetchUnmapped = 8,
+        Hook = 9,
+        InvalidInstruction = 10,
+        Map = 11,
+        WriteProtected = 12,
+        ReadProtected = 13,
+        FetchProtected = 14,
+        Argument = 15,
+        ReadUnaligned = 16,
+        WriteUnaligned = 17,
+        FetchUnaligned = 18,
+        HookExists = 19,
+        Resource = 20,
+        Exception = 21,
+        Overflow = 22
+    }
+
+    [Flags]
+    public enum HookType : uint
+    {
+        Interrupt = 1,
+        Instruction = 2,
+        Code = 4,
+        Block = 8,
+        MemReadUnmapped = 16,
+        MemWriteUnmapped = 32,
+        MemFetchUnmapped = 64,
+        MemReadProt = 128,
+        MemWriteProt = 256,
+        MemFetchProt = 512,
+        MemRead = 1024,
+        MemWrite = 2048,
+        MemFetch = 4096,
+        MemReadAfter = 8192,
+        InvalidInstruction = 16384,
+        EdgeGenerated = 32768,
+        TcgOpcode = 65536,
+        TlbFill = 131072,
+        MemUnmapped = MemReadUnmapped | MemWriteUnmapped | MemFetchUnmapped,
+        MemProt = MemReadProt | MemWriteProt | MemFetchProt,
+        MemReadInvalid = MemReadUnmapped | MemReadProt,
+        MemWriteInvalid = MemWriteUnmapped | MemWriteProt,
+        MemFetchInvalid = MemFetchUnmapped | MemFetchProt,
+        MemInvalid = MemUnmapped | MemProt,
+        MemValid = MemRead | MemWrite | MemFetch
+    }
+
+    public enum MemoryAccessType : uint
+    {
+        Read = 16,
+        Write = 17,
+        Fetch = 18,
+        ReadUnmapped = 19,
+        WriteUnmapped = 20,
+        FetchUnmapped = 21,
+        WriteProtected = 22,
+        ReadProtected = 23,
+        FetchProtected = 24,
+        ReadAfter = 25
+    }
+
+    [Flags]
+    public enum MemoryPermissions : uint
+    {
+        None = 0,
+        Read = 1,
+        Write = 2,
+        Execute = 4,
+        All = Read | Write | Execute
     }
 
     [Flags]
@@ -70,73 +143,34 @@ public partial class Unicorn
         Sparc64 = 1u << 3,
         V9 = 1u << 4,
         RiscV32 = 1u << 2,
-        RiscV64 = 1u << 3,
+        RiscV64 = 1u << 3
     }
 
-    [Flags]
-    public enum MemoryPermissions : uint
+    private const ulong DefaultHookBegin = 1;
+    private const ulong DefaultHookEnd = 0;
+
+    private const int X86InstructionIn = 218;
+    private const int X86InstructionOut = 500;
+    private const int X86InstructionSyscall = 699;
+
+    public readonly record struct HookRange(ulong Begin, ulong End)
     {
-        None = 0,
-        Read = 1,
-        Write = 2,
-        Execute = 4,
-        All = Read | Write | Execute,
+        public static HookRange All
+        {
+            get => new(DefaultHookBegin, DefaultHookEnd);
+        }
     }
 
-    [Flags]
-    public enum HookType : uint
+    public readonly record struct HookHandle(nuint Value)
     {
-        Interrupt = 1,
-        Instruction = 2,
-        Code = 4,
-        Block = 8,
-        MemReadUnmapped = 16,
-        MemWriteUnmapped = 32,
-        MemFetchUnmapped = 64,
-        MemReadProt = 128,
-        MemWriteProt = 256,
-        MemFetchProt = 512,
-        MemRead = 1024,
-        MemWrite = 2048,
-        MemFetch = 4096,
-        MemReadAfter = 8192,
-        InvalidInstruction = 16384,
-        EdgeGenerated = 32768,
-        TcgOpcode = 65536,
-        TlbFill = 131072,
-        MemUnmapped = MemReadUnmapped | MemWriteUnmapped | MemFetchUnmapped,
-        MemProt = MemReadProt | MemWriteProt | MemFetchProt,
-        MemReadInvalid = MemReadUnmapped | MemReadProt,
-        MemWriteInvalid = MemWriteUnmapped | MemWriteProt,
-        MemFetchInvalid = MemFetchUnmapped | MemFetchProt,
-        MemInvalid = MemUnmapped | MemProt,
-        MemValid = MemRead | MemWrite | MemFetch,
-    }
+        public bool IsEmpty
+        {
+            get => Value == 0;
+        }
 
-    public enum ErrorCode
-    {
-        Ok = 0,
-        NoMem = 1,
-        Arch = 2,
-        Handle = 3,
-        Mode = 4,
-        Version = 5,
-        ReadUnmapped = 6,
-        WriteUnmapped = 7,
-        FetchUnmapped = 8,
-        Hook = 9,
-        InvalidInstruction = 10,
-        Map = 11,
-        WriteProtected = 12,
-        ReadProtected = 13,
-        FetchProtected = 14,
-        Argument = 15,
-        ReadUnaligned = 16,
-        WriteUnaligned = 17,
-        FetchUnaligned = 18,
-        HookExists = 19,
-        Resource = 20,
-        Exception = 21,
-        Overflow = 22,
+        public override string ToString()
+        {
+            return Value.ToString(CultureInfo.InvariantCulture);
+        }
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using UnicornNet;
 using Xunit;
+using MemoryAccessType = UnicornNet.Unicorn.MemoryAccessType;
 
 namespace UnicornNet.Tests;
 
@@ -76,9 +76,157 @@ public sealed class HookTests
         Assert.Empty(native.ActiveHooks);
     }
 
+    [Fact]
+    public void MemReadHook_IsInvoked()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        MemoryAccessType observedType = default;
+        ulong observedAddress = 0;
+        var observedSize = 0;
+        long observedValue = 0;
+        object? observedState = null;
+
+        var handle = unicorn.AddMemReadHook((engine, type, address, size, value, state) =>
+        {
+            observedType = type;
+            observedAddress = address;
+            observedSize = size;
+            observedValue = value;
+            observedState = state;
+        }, state: "mem");
+
+        Assert.True(unicorn.TrySimulateMemoryHook(handle, MemoryAccessType.Read, 0x4000, 4, 0x12));
+        Assert.Equal(MemoryAccessType.Read, observedType);
+        Assert.Equal(0x4000UL, observedAddress);
+        Assert.Equal(4, observedSize);
+        Assert.Equal(0x12, observedValue);
+        Assert.Equal("mem", observedState);
+    }
+
+    [Fact]
+    public void MemWriteHook_IsInvoked()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        var invoked = false;
+        var handle = unicorn.AddMemWriteHook((engine, type, address, size, value, state) =>
+        {
+            invoked = type == MemoryAccessType.Write && address == 0x5000 && size == 2 && value == 0xFF;
+        });
+
+        Assert.True(unicorn.TrySimulateMemoryHook(handle, MemoryAccessType.Write, 0x5000, 2, 0xFF));
+        Assert.True(invoked);
+    }
+
+    [Fact]
+    public void EventMemHook_TracksPerEventType()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        var invocations = new List<string>();
+        var first = unicorn.AddEventMemHook(MemoryAccessType.ReadUnmapped, (engine, type, address, size, value, state) =>
+        {
+            invocations.Add($"first:{state}");
+            return true;
+        }, state: 1);
+
+        var second = unicorn.AddEventMemHook(MemoryAccessType.ReadUnmapped, (engine, type, address, size, value, state) =>
+        {
+            invocations.Add($"second:{state}");
+            return false;
+        }, state: 2);
+
+        Assert.True(unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, 0x6000, 8, 0));
+        Assert.Equal(new[]
+        {
+            "first:1",
+            "second:2"
+        }, invocations);
+
+        invocations.Clear();
+        unicorn.RemoveHook(first);
+        Assert.True(unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, 0x6000, 8, 0));
+        Assert.Equal(new[]
+        {
+            "second:2"
+        }, invocations);
+
+        unicorn.RemoveHook(second);
+        Assert.False(unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, 0x6000, 8, 0));
+    }
+
+    [Fact]
+    public void InterruptHook_IsInvoked()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        uint observed = 0;
+        object? observedState = null;
+
+        var handle = unicorn.AddInterruptHook((engine, interrupt, state) =>
+        {
+            observed = interrupt;
+            observedState = state;
+        }, state: "intr");
+
+        Assert.True(unicorn.TrySimulateInterruptHook(handle, 0x21));
+        Assert.Equal(0x21U, observed);
+        Assert.Equal("intr", observedState);
+    }
+
+    [Fact]
+    public void InHook_ReturnsValue()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        var handle = unicorn.AddInHook((engine, port, size, state) => port + (uint)size);
+
+        Assert.True(unicorn.TrySimulateInHook(handle, 0x33, 4, out var value));
+        Assert.Equal(0x37U, value);
+    }
+
+    [Fact]
+    public void OutHook_IsInvoked()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        var observed = new List<(uint port, int size, uint value)>();
+        var handle = unicorn.AddOutHook((engine, port, size, value, state) =>
+        {
+            observed.Add((port, size, value));
+        });
+
+        Assert.True(unicorn.TrySimulateOutHook(handle, 0x20, 1, 0xAA));
+        Assert.Single(observed);
+        Assert.Equal((0x20U, 1, 0xAAU), observed[0]);
+    }
+
+    [Fact]
+    public void SyscallHook_IsInvoked()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        object? observed = null;
+        var handle = unicorn.AddSyscallHook((engine, state) =>
+        {
+            observed = state;
+        }, state: "sys");
+
+        Assert.True(unicorn.TrySimulateSyscallHook(handle));
+        Assert.Equal("sys", observed);
+    }
+
     private sealed class FakeNativeProxy : IUnicornNativeProxy
     {
-        private nuint _nextHandle = 0;
+        private nuint _nextHandle;
 
         public bool Closed { get; private set; }
 
@@ -94,9 +242,37 @@ public sealed class HookTests
 
         public int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
         {
-            hookId = ++_nextHandle;
-            ActiveHooks.Add(hookId);
-            return 0;
+            return RegisterHook(out hookId);
+        }
+
+        public int HookAddMem(IntPtr engine, Unicorn.HookType hookType, NativeMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+        {
+            return RegisterHook(out hookId);
+        }
+
+        public int HookAddEventMem(IntPtr engine, Unicorn.HookType hookType, NativeEventMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+        {
+            return RegisterHook(out hookId);
+        }
+
+        public int HookAddInterrupt(IntPtr engine, Unicorn.HookType hookType, NativeInterruptHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+        {
+            return RegisterHook(out hookId);
+        }
+
+        public int HookAddInstructionIn(IntPtr engine, Unicorn.HookType hookType, NativeInstructionInHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
+        {
+            return RegisterHook(out hookId);
+        }
+
+        public int HookAddInstructionOut(IntPtr engine, Unicorn.HookType hookType, NativeInstructionOutHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
+        {
+            return RegisterHook(out hookId);
+        }
+
+        public int HookAddInstructionSyscall(IntPtr engine, Unicorn.HookType hookType, NativeSyscallHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
+        {
+            return RegisterHook(out hookId);
         }
 
         public int HookDel(IntPtr engine, nuint hookId)
@@ -106,9 +282,15 @@ public sealed class HookTests
             return 0;
         }
 
-        public int MemMap(IntPtr engine, ulong address, ulong size, uint permissions) => 0;
+        public int MemMap(IntPtr engine, ulong address, ulong size, uint permissions)
+        {
+            return 0;
+        }
 
-        public int MemProtect(IntPtr engine, ulong address, ulong size, uint permissions) => 0;
+        public int MemProtect(IntPtr engine, ulong address, ulong size, uint permissions)
+        {
+            return 0;
+        }
 
         public int MemRead(IntPtr engine, ulong address, Span<byte> buffer)
         {
@@ -116,13 +298,26 @@ public sealed class HookTests
             return 0;
         }
 
-        public int MemUnmap(IntPtr engine, ulong address, ulong size) => 0;
+        public int MemUnmap(IntPtr engine, ulong address, ulong size)
+        {
+            return 0;
+        }
 
-        public int MemWrite(IntPtr engine, ulong address, ReadOnlySpan<byte> data) => 0;
+        public int MemWrite(IntPtr engine, ulong address, ReadOnlySpan<byte> data)
+        {
+            return 0;
+        }
 
         public int Open(int architecture, int mode, out IntPtr engine)
         {
             engine = new IntPtr(0x1234);
+            return 0;
+        }
+
+        private int RegisterHook(out nuint hookId)
+        {
+            hookId = ++_nextHandle;
+            ActiveHooks.Add(hookId);
             return 0;
         }
     }

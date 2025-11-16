@@ -9,13 +9,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\UnicornNet\UnicornNet.csproj" />
+        <ProjectReference Include="..\UnicornNet\UnicornNet.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="unicorn.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
+        <None Update="unicorn.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
 </Project>

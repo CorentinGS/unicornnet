@@ -15,7 +15,12 @@ Console.WriteLine($"[engine] Created {architecture} engine in {mode} mode.");
 Console.WriteLine($"[mem] Mapping 0x{mappingSize:X} bytes @ 0x{mappingAddress:X} with RW permissions.");
 unicorn.MemMap(mappingAddress, mappingSize, Unicorn.MemoryPermissions.Read | Unicorn.MemoryPermissions.Write);
 
-var payload = new byte[] { 0x90, 0x90, 0xC3 }; // NOP, NOP, RET
+var payload = new byte[]
+{
+    0x90,
+    0x90,
+    0xC3
+}; // NOP, NOP, RET
 Console.WriteLine($"[mem] Writing payload: {FormatBytes(payload)}");
 unicorn.MemWrite(mappingAddress, payload);
 
@@ -40,7 +45,10 @@ Console.WriteLine("[hook] Demo hook removed.");
 Console.WriteLine("=== Demo complete ===");
 return;
 
-static string FormatBytes(ReadOnlySpan<byte> bytes) => BitConverter.ToString(bytes.ToArray());
+static string FormatBytes(ReadOnlySpan<byte> bytes)
+{
+    return BitConverter.ToString(bytes.ToArray());
+}
 
 static bool TriggerHookForDemo(Unicorn unicorn, Unicorn.HookHandle handle, ulong address, int size)
 {
