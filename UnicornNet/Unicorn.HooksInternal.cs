@@ -13,13 +13,12 @@ public partial class Unicorn
             return false;
         }
 
-        if (registration.Category is HookCategory.Code or HookCategory.Block)
-        {
-            registration.InvokeCode(address, size);
-            return true;
-        }
+        if (registration.Category is not (HookCategory.Code or HookCategory.Block))
+            return false;
+        
+        registration.InvokeCode(address, size);
+        return true;
 
-        return false;
     }
 
     internal bool TrySimulateMemoryHook(HookHandle handle, MemoryAccessType accessType, ulong address, int size, long value)
@@ -391,7 +390,7 @@ public partial class Unicorn
         _hookLock.EnterWriteLock();
         try
         {
-            registrations = new List<HookRegistration>(_hookRegistry.Values);
+            registrations = [.. _hookRegistry.Values];
             _hookRegistry.Clear();
             _eventMemRegistrations.Clear();
         }

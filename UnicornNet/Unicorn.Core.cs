@@ -66,9 +66,8 @@ public partial class Unicorn : IDisposable
 
     public void Control(ControlType type, ControlIo access, params nint[] arguments)
     {
-        var args = arguments ?? Array.Empty<nint>();
-        var command = ControlCommand.Create(type, args.Length, access);
-        Control(command, args);
+        var command = ControlCommand.Create(type, arguments.Length, access);
+        Control(command, arguments);
     }
 
     public void ControlRead(ControlType type, params nint[] arguments)
