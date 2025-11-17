@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace UnicornNet;
 
 /// <summary>
@@ -5,6 +7,25 @@ namespace UnicornNet;
 /// </summary>
 public static class UnicornExtensions
 {
+    /// <summary>
+    /// Page size used for memory alignment (4KB)
+    /// </summary>
+    private const ulong PageSize = 0x1000;
+
+    /// <summary>
+    /// Page mask for alignment calculations
+    /// </summary>
+    private const ulong PageMask = PageSize - 1;
+
+    /// <summary>
+    /// Aligns a size value to the next page boundary
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong AlignToPageSize(ulong size)
+    {
+        return (size + PageMask) & ~PageMask;
+    }
+
     extension(Unicorn engine)
     {
         /// <summary>
@@ -30,8 +51,7 @@ public static class UnicornExtensions
         {
             ArgumentNullException.ThrowIfNull(engine);
 
-            // Align size to page boundary (4KB)
-            var alignedSize = ((ulong)code.Length + 0xFFF) & ~0xFFFul;
+            var alignedSize = AlignToPageSize((ulong)code.Length);
 
             var region = engine.MapRegion(address, alignedSize, Unicorn.MemoryPermissions.All);
             engine.MemWrite(address, code);
@@ -48,8 +68,7 @@ public static class UnicornExtensions
         {
             ArgumentNullException.ThrowIfNull(engine);
 
-            // Align size to page boundary (4KB)
-            var alignedSize = ((ulong)data.Length + 0xFFF) & ~0xFFFul;
+            var alignedSize = AlignToPageSize((ulong)data.Length);
 
             var region = engine.MapRegion(address, alignedSize, Unicorn.MemoryPermissions.Read | Unicorn.MemoryPermissions.Write);
             engine.MemWrite(address, data);
@@ -63,8 +82,7 @@ public static class UnicornExtensions
         {
             ArgumentNullException.ThrowIfNull(engine);
 
-            // Align size to page boundary (4KB)
-            var alignedSize = ((ulong)data.Length + 0xFFF) & ~0xFFFul;
+            var alignedSize = AlignToPageSize((ulong)data.Length);
 
             var region = engine.MapRegion(address, alignedSize, Unicorn.MemoryPermissions.All);
             engine.MemWrite(address, data);
@@ -75,24 +93,36 @@ public static class UnicornExtensions
             return region;
         }
         /// <summary>
-        /// Write a value to memory at the specified address
+        /// Write bytes to memory at the specified address
         /// </summary>
         public void WriteBytes(ulong address, params byte[] bytes)
         {
-            ArgumentNullException.ThrowIfNull(engine);
             ArgumentNullException.ThrowIfNull(bytes);
             engine.MemWrite(address, bytes);
         }
+
         /// <summary>
-        /// Read bytes from memory
+        /// Write bytes to memory at the specified address without allocation (Span-based)
+        /// </summary>
+        public void WriteBytes(ulong address, ReadOnlySpan<byte> bytes)
+        {
+            engine.MemWrite(address, bytes);
+        }
+
+        /// <summary>
+        /// Read bytes from memory into the provided destination span (zero-allocation)
+        /// </summary>
+        public void ReadBytes(ulong address, Span<byte> destination)
+        {
+            engine.MemRead(address, destination);
+        }
+
+        /// <summary>
+        /// Read bytes from memory and return as a new array
         /// </summary>
         public byte[] ReadBytes(ulong address, int count)
         {
-            ArgumentNullException.ThrowIfNull(engine);
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count), "Count must be non-negative");
-            }
+            ArgumentOutOfRangeException.ThrowIfNegative(count);
 
             var buffer = new byte[count];
             engine.MemRead(address, buffer);

@@ -16,6 +16,11 @@ public partial class Unicorn
         Syscall
     }
 
+    /// <summary>
+    /// Manages the lifecycle of a hook registration.
+    /// WARNING: This class is NOT thread-safe. Hook callbacks and disposal must not be called concurrently.
+    /// If you need to use hooks from multiple threads, ensure proper synchronization externally.
+    /// </summary>
     private sealed class HookRegistration : IDisposable
     {
         private readonly Delegate _callback;

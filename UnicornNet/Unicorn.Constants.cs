@@ -4,6 +4,7 @@ namespace UnicornNet;
 
 public partial class Unicorn
 {
+    // Non-generic delegates for backward compatibility
     public delegate void BlockHook(Unicorn engine, ulong address, int size, object? state);
 
     public delegate void CodeHook(Unicorn engine, ulong address, int size, object? state);
@@ -19,6 +20,23 @@ public partial class Unicorn
     public delegate void OutHook(Unicorn engine, uint port, int size, uint value, object? state);
 
     public delegate void SyscallHook(Unicorn engine, object? state);
+
+    // Generic delegates to avoid boxing value type states
+    public delegate void BlockHook<in TState>(Unicorn engine, ulong address, int size, TState state);
+
+    public delegate void CodeHook<in TState>(Unicorn engine, ulong address, int size, TState state);
+
+    public delegate uint InHook<in TState>(Unicorn engine, uint port, int size, TState state);
+
+    public delegate void InterruptHook<in TState>(Unicorn engine, uint interruptNumber, TState state);
+
+    public delegate bool MemoryEventHook<in TState>(Unicorn engine, MemoryAccessType accessType, ulong address, int size, long value, TState state);
+
+    public delegate void MemoryHook<in TState>(Unicorn engine, MemoryAccessType accessType, ulong address, int size, long value, TState state);
+
+    public delegate void OutHook<in TState>(Unicorn engine, uint port, int size, uint value, TState state);
+
+    public delegate void SyscallHook<in TState>(Unicorn engine, TState state);
 
     public enum Architecture : uint
     {
@@ -130,7 +148,9 @@ public partial class Unicorn
         WriteProtected = 22,
         ReadProtected = 23,
         FetchProtected = 24,
-        ReadAfter = 25
+        ReadAfter = 25,
+        All = Read | Write | Fetch | ReadUnmapped | WriteUnmapped | FetchUnmapped | WriteProtected | ReadProtected | FetchProtected | ReadAfter
+
     }
 
     [Flags]
@@ -174,11 +194,32 @@ public partial class Unicorn
         RiscV64 = 1u << 3
     }
 
+    /// <summary>
+    /// Default hook begin address. Value of 1 indicates hook should start from first instruction.
+    /// </summary>
     private const ulong DefaultHookBegin = 1;
+
+    /// <summary>
+    /// Default hook end address. Value of 0 indicates hook should run until end of execution.
+    /// </summary>
     private const ulong DefaultHookEnd = 0;
 
+    /// <summary>
+    /// X86 instruction ID for IN instruction (from unicorn_const.h: X86_INS_IN).
+    /// Used to detect I/O port read operations.
+    /// </summary>
     private const int X86InstructionIn = 218;
+
+    /// <summary>
+    /// X86 instruction ID for OUT instruction (from unicorn_const.h: X86_INS_OUT).
+    /// Used to detect I/O port write operations.
+    /// </summary>
     private const int X86InstructionOut = 500;
+
+    /// <summary>
+    /// X86 instruction ID for SYSCALL instruction (from unicorn_const.h: X86_INS_SYSCALL).
+    /// Used to detect system call instructions.
+    /// </summary>
     private const int X86InstructionSyscall = 699;
 
     public readonly record struct ControlCommand(uint Value)
@@ -261,6 +302,14 @@ public partial class Unicorn
         public override string ToString()
         {
             return Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Formats the hook handle into the provided span without allocating.
+        /// </summary>
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider? provider = null)
+        {
+            return Value.TryFormat(destination, out charsWritten, format, provider ?? CultureInfo.InvariantCulture);
         }
     }
 }

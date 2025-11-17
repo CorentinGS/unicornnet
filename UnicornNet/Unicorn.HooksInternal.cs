@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace UnicornNet;
 
@@ -233,10 +234,12 @@ public partial class Unicorn
         return range ?? HookRange.All;
     }
 
-    private bool TryGetRegistration(HookHandle handle, out HookRegistration registration)
+    private bool TryGetRegistration(HookHandle handle, [NotNullWhen(true)] out HookRegistration? registration)
     {
-        registration = null!;
-        return !handle.IsEmpty && _hookRegistry.TryGetValue(handle.Value, out registration!);
+        if (!handle.IsEmpty)
+            return _hookRegistry.TryGetValue(handle.Value, out registration);
+        registration = null;
+        return false;
     }
 
     private void AddRegistration(HookRegistration registration)
@@ -326,12 +329,9 @@ public partial class Unicorn
 
     private void ClearHooks()
     {
-        var registrations = _hookRegistry.Values.ToArray();
-        _hookRegistry.Clear();
-        _eventMemRegistrations.Clear();
-
         var engine = EngineHandle;
-        foreach (var registration in registrations)
+
+        foreach (var registration in _hookRegistry.Values)
         {
             if (engine != IntPtr.Zero && !registration.Handle.IsEmpty)
             {
@@ -340,5 +340,8 @@ public partial class Unicorn
 
             registration.Dispose();
         }
+
+        _hookRegistry.Clear();
+        _eventMemRegistrations.Clear();
     }
 }

@@ -18,7 +18,9 @@ public readonly struct MemoryRegion : IDisposable
     public ulong Size { get; }
 
     /// <summary>
-    /// The permissions for this memory region
+    /// The permissions for this memory region at the time of creation.
+    /// Note: This is a snapshot value. If <see cref="Protect"/> is called to change permissions,
+    /// this property will NOT reflect the updated permissions. Query the engine directly if you need current permissions.
     /// </summary>
     public Unicorn.MemoryPermissions Permissions { get; }
 
@@ -33,7 +35,7 @@ public readonly struct MemoryRegion : IDisposable
     /// <summary>
     /// Write data to this memory region
     /// </summary>
-    public void Write(ReadOnlySpan<byte> data, ulong offset = 0)
+    public readonly void Write(ReadOnlySpan<byte> data, ulong offset = 0)
     {
         if (offset + (ulong)data.Length > Size)
         {
@@ -46,7 +48,7 @@ public readonly struct MemoryRegion : IDisposable
     /// <summary>
     /// Read data from this memory region
     /// </summary>
-    public void Read(Span<byte> buffer, ulong offset = 0)
+    public readonly void Read(Span<byte> buffer, ulong offset = 0)
     {
         if (offset + (ulong)buffer.Length > Size)
         {
@@ -59,7 +61,7 @@ public readonly struct MemoryRegion : IDisposable
     /// <summary>
     /// Change the permissions of this memory region
     /// </summary>
-    public void Protect(Unicorn.MemoryPermissions permissions)
+    public readonly void Protect(Unicorn.MemoryPermissions permissions)
     {
         _engine.MemProtect(Address, Size, permissions);
     }
@@ -67,9 +69,9 @@ public readonly struct MemoryRegion : IDisposable
     /// <summary>
     /// Unmap this memory region
     /// </summary>
-    public void Dispose()
+    public readonly void Dispose()
     {
-        _engine?.MemUnmap(Address, Size);
+        _engine.MemUnmap(Address, Size);
     }
 
     /// <summary>
@@ -83,7 +85,7 @@ public readonly struct MemoryRegion : IDisposable
     /// <summary>
     /// Check if an address is within this region
     /// </summary>
-    public bool Contains(ulong address)
+    public readonly bool Contains(ulong address)
     {
         return address >= Address && address < EndAddress;
     }
@@ -91,7 +93,7 @@ public readonly struct MemoryRegion : IDisposable
     /// <summary>
     /// Check if an address range is fully contained within this region
     /// </summary>
-    public bool Contains(ulong address, ulong size)
+    public readonly bool Contains(ulong address, ulong size)
     {
         return address >= Address && (address + size) <= EndAddress;
     }

@@ -113,7 +113,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Returns all registered hook handles
+    /// Returns all registered hook handles as an immutable copy
     /// </summary>
-    public IReadOnlyList<Unicorn.HookHandle> GetHandles() => _handles.AsReadOnly();
+    public IReadOnlyList<Unicorn.HookHandle> GetHandles() => _handles.ToArray();
 }

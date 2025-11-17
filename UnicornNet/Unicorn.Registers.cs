@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace UnicornNet;
@@ -19,10 +20,11 @@ public partial class Unicorn
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RegWrite<T>(int registerId, T value)
         where T : unmanaged
     {
-        ReadOnlySpan<T> span = MemoryMarshal.CreateReadOnlySpan(ref value, 1);
+        var span = MemoryMarshal.CreateReadOnlySpan(ref value, 1);
         RegWrite(registerId, MemoryMarshal.AsBytes(span));
     }
 
@@ -41,11 +43,12 @@ public partial class Unicorn
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T RegRead<T>(int registerId)
         where T : unmanaged
     {
         T value = default;
-        Span<T> span = MemoryMarshal.CreateSpan(ref value, 1);
+        var span = MemoryMarshal.CreateSpan(ref value, 1);
         RegRead(registerId, MemoryMarshal.AsBytes(span));
         return value;
     }
