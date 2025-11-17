@@ -80,6 +80,29 @@ public partial class Unicorn
         ContextMode = 14
     }
 
+    public enum QueryType : uint
+    {
+        Mode = 1,
+        PageSize = 2,
+        Architecture = 3,
+        Timeout = 4
+    }
+
+    public enum TlbType : uint
+    {
+        Cpu = 0,
+        Virtual = 1
+    }
+
+    [Flags]
+    public enum ContextScope : uint
+    {
+        None = 0,
+        Cpu = 1,
+        Memory = 2,
+        All = Cpu | Memory
+    }
+
     public enum ErrorCode
     {
         Ok = 0,
@@ -135,6 +158,13 @@ public partial class Unicorn
         MemFetchInvalid = MemFetchUnmapped | MemFetchProt,
         MemInvalid = MemUnmapped | MemProt,
         MemValid = MemRead | MemWrite | MemFetch
+    }
+
+    public enum TcgOpcodeType : uint
+    {
+        Subtract = 0,
+        FlagCompare = 1,
+        FlagDirect = 2
     }
 
     public enum MemoryAccessType : uint

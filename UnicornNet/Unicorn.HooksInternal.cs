@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace UnicornNet;
@@ -7,6 +8,21 @@ public partial class Unicorn
 {
     private readonly ConcurrentDictionary<MemoryAccessType, ConcurrentDictionary<nuint, byte>> _eventMemRegistrations = new();
     private readonly ConcurrentDictionary<nuint, HookRegistration> _hookRegistry = new();
+    private const HookType EventMemoryHookMask = HookType.MemReadUnmapped
+        | HookType.MemWriteUnmapped
+        | HookType.MemFetchUnmapped
+        | HookType.MemReadProt
+        | HookType.MemWriteProt
+        | HookType.MemFetchProt;
+    private static readonly (HookType Flag, MemoryAccessType AccessType)[] EventMemoryHookMappings =
+    {
+        (HookType.MemReadUnmapped, MemoryAccessType.ReadUnmapped),
+        (HookType.MemWriteUnmapped, MemoryAccessType.WriteUnmapped),
+        (HookType.MemFetchUnmapped, MemoryAccessType.FetchUnmapped),
+        (HookType.MemReadProt, MemoryAccessType.ReadProtected),
+        (HookType.MemWriteProt, MemoryAccessType.WriteProtected),
+        (HookType.MemFetchProt, MemoryAccessType.FetchProtected),
+    };
 
     internal bool TrySimulateHook(HookHandle handle, ulong address, int size)
     {
@@ -144,14 +160,25 @@ public partial class Unicorn
         }
 
         var hookType = GetHookTypeForEvent(accessType);
+        return RegisterEventMemHook(hookType, callback, range, state, accessType);
+    }
+
+    private HookHandle RegisterEventMemHook(HookType eventTypes, MemoryEventHook callback, HookRange? range, object? state)
+    {
+        var normalizedHookTypes = NormalizeEventHookTypes(eventTypes);
+        return RegisterEventMemHook(normalizedHookTypes, callback, range, state, null);
+    }
+
+    private HookHandle RegisterEventMemHook(HookType hookTypes, MemoryEventHook callback, HookRange? range, object? state, MemoryAccessType? accessType)
+    {
         var normalizedRange = NormalizeRange(range);
-        var registration = new HookRegistration(this, hookType, HookCategory.EventMemory, callback, state, accessType);
+        var registration = new HookRegistration(this, hookTypes, HookCategory.EventMemory, callback, state, accessType);
         return RegisterHookInternal(
             registration,
             normalizedRange,
             (engine, hookRange) =>
             {
-                var err = _native.HookAddEventMem(engine, hookType, EventMemHookThunk, registration.UserDataPointer, hookRange.Begin, hookRange.End, out var hookId);
+                var err = _native.HookAddEventMem(engine, hookTypes, EventMemHookThunk, registration.UserDataPointer, hookRange.Begin, hookRange.End, out var hookId);
                 return (err, hookId);
             });
     }
@@ -246,23 +273,46 @@ public partial class Unicorn
     {
         _hookRegistry.TryAdd(registration.Handle.Value, registration);
 
-        if (registration.Category != HookCategory.EventMemory || !registration.AccessType.HasValue)
+        if (registration.Category != HookCategory.EventMemory)
             return;
 
-        var handles = _eventMemRegistrations.GetOrAdd(registration.AccessType.Value, _ => new ConcurrentDictionary<nuint, byte>());
-        handles.TryAdd(registration.Handle.Value, 0);
+        foreach (var accessType in GetEventAccessTypes(registration))
+        {
+            var handles = _eventMemRegistrations.GetOrAdd(accessType, _ => new ConcurrentDictionary<nuint, byte>());
+            handles.TryAdd(registration.Handle.Value, 0);
+        }
     }
 
     private void RemoveEventRegistration(HookRegistration registration)
     {
-        if (registration.Category != HookCategory.EventMemory || !registration.AccessType.HasValue)
+        if (registration.Category != HookCategory.EventMemory)
         {
             return;
         }
 
-        if (_eventMemRegistrations.TryGetValue(registration.AccessType.Value, out var handles))
+        foreach (var accessType in GetEventAccessTypes(registration))
         {
-            handles.TryRemove(registration.Handle.Value, out _);
+            if (_eventMemRegistrations.TryGetValue(accessType, out var handles))
+            {
+                handles.TryRemove(registration.Handle.Value, out _);
+            }
+        }
+    }
+
+    private static IEnumerable<MemoryAccessType> GetEventAccessTypes(HookRegistration registration)
+    {
+        if (registration.AccessType.HasValue)
+        {
+            yield return registration.AccessType.Value;
+            yield break;
+        }
+
+        foreach (var (flag, accessType) in EventMemoryHookMappings)
+        {
+            if ((registration.Type & flag) != 0)
+            {
+                yield return accessType;
+            }
         }
     }
 
@@ -288,6 +338,17 @@ public partial class Unicorn
             MemoryAccessType.FetchProtected => HookType.MemFetchProt,
             _ => throw new ArgumentOutOfRangeException(nameof(accessType))
         };
+    }
+
+    private static HookType NormalizeEventHookTypes(HookType eventTypes)
+    {
+        var normalized = eventTypes & EventMemoryHookMask;
+        if (normalized == 0 || (eventTypes & ~EventMemoryHookMask) != 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(eventTypes), "Event types must consist solely of UC_HOOK_MEM_* flags.");
+        }
+
+        return normalized;
     }
 
     private void RemoveHookInternal(HookHandle handle, bool throwIfMissing)

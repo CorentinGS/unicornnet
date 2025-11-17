@@ -113,6 +113,17 @@ public sealed class HookBuilder
     }
 
     /// <summary>
+    /// Add an event memory hook that listens to multiple event types described by a HookType mask
+    /// </summary>
+    public HookBuilder OnEventMem(Unicorn.HookType eventTypes, Unicorn.MemoryEventHook callback, Unicorn.HookRange? range = null, object? state = null)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        var handle = _engine.AddEventMemHook(eventTypes, callback, range, state);
+        _handles.Add(handle);
+        return this;
+    }
+
+    /// <summary>
     /// Returns all registered hook handles as an immutable copy
     /// </summary>
     public IReadOnlyList<Unicorn.HookHandle> GetHandles() => _handles.ToArray();

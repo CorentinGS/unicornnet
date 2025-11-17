@@ -46,6 +46,11 @@ public partial class Unicorn
 
         public HookCategory Category { get; }
 
+        public HookType Type
+        {
+            get => _type;
+        }
+
         public MemoryAccessType? AccessType { get; }
 
         public IntPtr UserDataPointer

@@ -147,6 +147,15 @@ public partial class Unicorn
     }
 
     /// <summary>
+    /// Adds an event memory hook that can monitor multiple event types using a hook-type bitmask
+    /// </summary>
+    public HookHandle AddEventMemHook(HookType eventTypes, MemoryEventHook callback, HookRange? range = null, object? state = null)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        return RegisterEventMemHook(eventTypes, callback, range, state);
+    }
+
+    /// <summary>
     /// Adds a memory event hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddEventMemHook<TState>(MemoryAccessType accessType, MemoryEventHook<TState> callback, HookRange? range = null, TState? state = default)
@@ -154,6 +163,16 @@ public partial class Unicorn
         ArgumentNullException.ThrowIfNull(callback);
         MemoryEventHook wrapper = (engine, accessType2, address, size, value, boxedState) => callback(engine, accessType2, address, size, value, (TState)boxedState!);
         return RegisterEventMemHook(accessType, wrapper, range, state);
+    }
+
+    /// <summary>
+    /// Adds a memory event hook with a strongly-typed state parameter that can listen to multiple hook types
+    /// </summary>
+    public HookHandle AddEventMemHook<TState>(HookType eventTypes, MemoryEventHook<TState> callback, HookRange? range = null, TState? state = default)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        MemoryEventHook wrapper = (engine, accessType2, address, size, value, boxedState) => callback(engine, accessType2, address, size, value, (TState)boxedState!);
+        return RegisterEventMemHook(eventTypes, wrapper, range, state);
     }
 
     public void RemoveHook(HookHandle handle)

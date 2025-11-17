@@ -198,6 +198,34 @@ public sealed class HookTests
     }
 
     [Fact]
+    public void EventMemHook_AllowsHookTypeMaskRegistration()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        var observedTypes = new List<MemoryAccessType>();
+        var mask = Unicorn.HookType.MemUnmapped | Unicorn.HookType.MemProt;
+        var handle = unicorn.AddEventMemHook(mask, (engine, type, address, size, value, state) =>
+        {
+            observedTypes.Add(type);
+            return true;
+        });
+
+        var unmappedTriggered = unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, TestAddress, TestCodeSize, 0);
+        var protectedTriggered = unicorn.TrySimulateEventMem(MemoryAccessType.WriteProtected, TestAddress, TestCodeSize, 0);
+
+        Assert.True(unmappedTriggered);
+        Assert.True(protectedTriggered);
+        Assert.Contains(MemoryAccessType.ReadUnmapped, observedTypes);
+        Assert.Contains(MemoryAccessType.WriteProtected, observedTypes);
+
+        unicorn.RemoveHook(handle);
+
+        var noEventTriggered = unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, TestAddress, TestCodeSize, 0);
+        Assert.False(noEventTriggered);
+    }
+
+    [Fact]
     public void InterruptHook_IsInvoked()
     {
         var native = new FakeNativeProxy();
