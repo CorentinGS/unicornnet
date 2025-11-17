@@ -21,10 +21,13 @@ internal interface IUnicornNativeProxy
     int Open(int architecture, int mode, out IntPtr engine);
     int Close(IntPtr engine);
     int MemMap(IntPtr engine, ulong address, ulong size, uint permissions);
+    int MemMapPtr(IntPtr engine, ulong address, ulong size, uint permissions, IntPtr pointer);
     int MemUnmap(IntPtr engine, ulong address, ulong size);
     int MemProtect(IntPtr engine, ulong address, ulong size, uint permissions);
     int MemWrite(IntPtr engine, ulong address, ReadOnlySpan<byte> data);
     int MemRead(IntPtr engine, ulong address, Span<byte> buffer);
+    int RegWrite(IntPtr engine, int registerId, ReadOnlySpan<byte> value);
+    int RegRead(IntPtr engine, int registerId, Span<byte> buffer);
     int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
     int HookAddMem(IntPtr engine, Unicorn.HookType hookType, NativeMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
     int HookAddEventMem(IntPtr engine, Unicorn.HookType hookType, NativeEventMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
@@ -59,6 +62,11 @@ internal sealed class NativeUnicornProxy : IUnicornNativeProxy
         return Unicorn.NativeMethods.UcMemMap(engine, address, size, permissions);
     }
 
+    public int MemMapPtr(IntPtr engine, ulong address, ulong size, uint permissions, IntPtr pointer)
+    {
+        return Unicorn.NativeMethods.UcMemMapPtr(engine, address, size, permissions, pointer);
+    }
+
     public int MemUnmap(IntPtr engine, ulong address, ulong size)
     {
         return Unicorn.NativeMethods.UcMemUnmap(engine, address, size);
@@ -77,6 +85,16 @@ internal sealed class NativeUnicornProxy : IUnicornNativeProxy
     public int MemRead(IntPtr engine, ulong address, Span<byte> buffer)
     {
         return buffer.IsEmpty ? 0 : Unicorn.NativeMethods.UcMemRead(engine, address, ref MemoryMarshal.GetReference(buffer), (nuint)buffer.Length);
+    }
+
+    public int RegWrite(IntPtr engine, int registerId, ReadOnlySpan<byte> value)
+    {
+        return value.IsEmpty ? 0 : Unicorn.NativeMethods.UcRegWrite(engine, registerId, ref MemoryMarshal.GetReference(value));
+    }
+
+    public int RegRead(IntPtr engine, int registerId, Span<byte> buffer)
+    {
+        return buffer.IsEmpty ? 0 : Unicorn.NativeMethods.UcRegRead(engine, registerId, ref MemoryMarshal.GetReference(buffer));
     }
 
     public int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)

@@ -26,6 +26,26 @@ public partial class Unicorn
         MemMap(address, size, (MemoryPermissions)permissions);
     }
 
+    public void MemMapPtr(ulong address, ulong size, MemoryPermissions permissions, IntPtr pointer)
+    {
+        EnsureNotDisposed();
+        if (pointer == IntPtr.Zero)
+        {
+            throw new ArgumentException("Pointer cannot be zero.", nameof(pointer));
+        }
+
+        var err = _native.MemMapPtr(EngineHandle, address, size, (uint)permissions, pointer);
+        if (err != 0)
+        {
+            throw new UnicornMemoryException((ErrorCode)err, "uc_mem_map_ptr", address, size);
+        }
+    }
+
+    public void MemMapPtr(ulong address, ulong size, uint permissions, IntPtr pointer)
+    {
+        MemMapPtr(address, size, (MemoryPermissions)permissions, pointer);
+    }
+
     public void MemUnmap(ulong address, ulong size)
     {
         EnsureNotDisposed();

@@ -9,6 +9,9 @@ public partial class Unicorn
         [LibraryImport("unicorn", EntryPoint = "uc_mem_map")]
         public static partial int UcMemMap(IntPtr engine, ulong address, ulong size, uint perms);
 
+        [LibraryImport("unicorn", EntryPoint = "uc_mem_map_ptr")]
+        public static partial int UcMemMapPtr(IntPtr engine, ulong address, ulong size, uint perms, IntPtr pointer);
+
         [LibraryImport("unicorn", EntryPoint = "uc_mem_unmap")]
         public static partial int UcMemUnmap(IntPtr engine, ulong address, ulong size);
 
@@ -20,6 +23,12 @@ public partial class Unicorn
 
         [LibraryImport("unicorn", EntryPoint = "uc_mem_read")]
         public static partial int UcMemRead(IntPtr engine, ulong address, ref byte buffer, nuint size);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_reg_write")]
+        public static partial int UcRegWrite(IntPtr engine, int registerId, ref byte value);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_reg_read")]
+        public static partial int UcRegRead(IntPtr engine, int registerId, ref byte buffer);
 
         [LibraryImport("unicorn", EntryPoint = "uc_open")]
         public static partial int UcOpen(int arch, int mode, out IntPtr engine);
