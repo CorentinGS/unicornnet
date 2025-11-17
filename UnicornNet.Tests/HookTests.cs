@@ -5,28 +5,39 @@ using MemoryAccessType = UnicornNet.Unicorn.MemoryAccessType;
 
 namespace UnicornNet.Tests;
 
+/// <summary>
+/// Tests for Unicorn hook registration, invocation, and lifecycle management.
+/// </summary>
 public sealed class HookTests
 {
+    private const ulong TestAddress = 0x1000;
+    private const int TestCodeSize = 4;
+    private const string TestState = "test_state";
     [Fact]
     public void CodeHook_IsInvoked_WhenTriggered()
     {
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        var invocations = 0;
+        var invocationCount = 0;
         object? observedState = null;
+        const string expectedState = "code";
+        const ulong expectedAddress = 0x1000;
+        const int expectedSize = 4;
 
         var handle = unicorn.AddCodeHook((_, address, size, state) =>
         {
-            invocations++;
-            Assert.Equal(0x1000UL, address);
-            Assert.Equal(4, size);
+            invocationCount++;
+            Assert.Equal(expectedAddress, address);
+            Assert.Equal(expectedSize, size);
             observedState = state;
-        }, state: "code");
+        }, state: expectedState);
 
-        Assert.True(unicorn.TrySimulateHook(handle, 0x1000, 4));
-        Assert.Equal(1, invocations);
-        Assert.Equal("code", observedState);
+        var simulationSucceeded = unicorn.TrySimulateHook(handle, expectedAddress, expectedSize);
+        
+        Assert.True(simulationSucceeded);
+        Assert.Equal(1, invocationCount);
+        Assert.Equal(expectedState, observedState);
     }
 
     [Fact]
@@ -35,13 +46,15 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        var invocations = 0;
-        var handle = unicorn.AddBlockHook((_, _, _, _) => invocations++);
+        var invocationCount = 0;
+        var handle = unicorn.AddBlockHook((_, _, _, _) => invocationCount++);
 
         unicorn.RemoveHook(handle);
 
-        Assert.False(unicorn.TrySimulateHook(handle, 0x2000, 8));
-        Assert.Equal(0, invocations);
+        var simulationAttempted = unicorn.TrySimulateHook(handle, 0x2000, 8);
+        
+        Assert.False(simulationAttempted);
+        Assert.Equal(0, invocationCount);
         Assert.Contains(handle.Value, native.RemovedHooks);
     }
 
@@ -55,8 +68,11 @@ public sealed class HookTests
 
         unicorn.HookDel(handle);
 
-        Assert.False(unicorn.TrySimulateHook(handle, 0x3000, 2));
+        var simulationAttempted = unicorn.TrySimulateHook(handle, 0x3000, 2);
+        
+        Assert.False(simulationAttempted);
         Assert.Single(native.RemovedHooks);
+        Assert.Contains(handle.Value, native.RemovedHooks);
     }
 
     [Fact]
@@ -65,14 +81,15 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        var first = unicorn.AddCodeHook((_, _, _, _) => { });
-        var second = unicorn.AddBlockHook((_, _, _, _) => { });
+        var firstHook = unicorn.AddCodeHook((_, _, _, _) => { });
+        var secondHook = unicorn.AddBlockHook((_, _, _, _) => { });
 
         unicorn.Dispose();
 
         Assert.True(native.Closed);
-        Assert.Contains(first.Value, native.RemovedHooks);
-        Assert.Contains(second.Value, native.RemovedHooks);
+        Assert.Contains(firstHook.Value, native.RemovedHooks);
+        Assert.Contains(secondHook.Value, native.RemovedHooks);
+        Assert.Equal(2, native.RemovedHooks.Count);
         Assert.Empty(native.ActiveHooks);
     }
 
@@ -87,6 +104,11 @@ public sealed class HookTests
         var observedSize = 0;
         long observedValue = 0;
         object? observedState = null;
+        
+        const string expectedState = "mem";
+        const ulong expectedAddress = 0x4000;
+        const int expectedSize = 4;
+        const long expectedValue = 0x12;
 
         var handle = unicorn.AddMemReadHook((engine, type, address, size, value, state) =>
         {
@@ -95,14 +117,16 @@ public sealed class HookTests
             observedSize = size;
             observedValue = value;
             observedState = state;
-        }, state: "mem");
+        }, state: expectedState);
 
-        Assert.True(unicorn.TrySimulateMemoryHook(handle, MemoryAccessType.Read, 0x4000, 4, 0x12));
+        var simulationSucceeded = unicorn.TrySimulateMemoryHook(handle, MemoryAccessType.Read, expectedAddress, expectedSize, expectedValue);
+        
+        Assert.True(simulationSucceeded);
         Assert.Equal(MemoryAccessType.Read, observedType);
-        Assert.Equal(0x4000UL, observedAddress);
-        Assert.Equal(4, observedSize);
-        Assert.Equal(0x12, observedValue);
-        Assert.Equal("mem", observedState);
+        Assert.Equal(expectedAddress, observedAddress);
+        Assert.Equal(expectedSize, observedSize);
+        Assert.Equal(expectedValue, observedValue);
+        Assert.Equal(expectedState, observedState);
     }
 
     [Fact]
@@ -111,14 +135,23 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        var invoked = false;
+        var wasInvokedCorrectly = false;
+        const ulong expectedAddress = 0x5000;
+        const int expectedSize = 2;
+        const long expectedValue = 0xFF;
+        
         var handle = unicorn.AddMemWriteHook((engine, type, address, size, value, state) =>
         {
-            invoked = type == MemoryAccessType.Write && address == 0x5000 && size == 2 && value == 0xFF;
+            wasInvokedCorrectly = type == MemoryAccessType.Write 
+                && address == expectedAddress 
+                && size == expectedSize 
+                && value == expectedValue;
         });
 
-        Assert.True(unicorn.TrySimulateMemoryHook(handle, MemoryAccessType.Write, 0x5000, 2, 0xFF));
-        Assert.True(invoked);
+        var simulationSucceeded = unicorn.TrySimulateMemoryHook(handle, MemoryAccessType.Write, expectedAddress, expectedSize, expectedValue);
+        
+        Assert.True(simulationSucceeded);
+        Assert.True(wasInvokedCorrectly);
     }
 
     [Fact]
@@ -128,35 +161,40 @@ public sealed class HookTests
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
         var invocations = new List<string>();
-        var first = unicorn.AddEventMemHook(MemoryAccessType.ReadUnmapped, (engine, type, address, size, value, state) =>
-        {
-            invocations.Add($"first:{state}");
-            return true;
-        }, state: 1);
+        const int firstState = 1;
+        const int secondState = 2;
+        const ulong testAddress = 0x6000;
+        const int testSize = 8;
+        const long testValue = 0;
+        
+        var firstHook = unicorn.AddEventMemHook(MemoryAccessType.ReadUnmapped, 
+            (engine, type, address, size, value, state) =>
+            {
+                invocations.Add($"first:{state}");
+                return true;
+            }, state: firstState);
 
-        var second = unicorn.AddEventMemHook(MemoryAccessType.ReadUnmapped, (engine, type, address, size, value, state) =>
-        {
-            invocations.Add($"second:{state}");
-            return false;
-        }, state: 2);
+        var secondHook = unicorn.AddEventMemHook(MemoryAccessType.ReadUnmapped, 
+            (engine, type, address, size, value, state) =>
+            {
+                invocations.Add($"second:{state}");
+                return false;
+            }, state: secondState);
 
-        Assert.True(unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, 0x6000, 8, 0));
-        Assert.Equal(new[]
-        {
-            "first:1",
-            "second:2"
-        }, invocations);
+        var bothHooksInvoked = unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, testAddress, testSize, testValue);
+        Assert.True(bothHooksInvoked);
+        Assert.Equal(new[] { "first:1", "second:2" }, invocations);
 
         invocations.Clear();
-        unicorn.RemoveHook(first);
-        Assert.True(unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, 0x6000, 8, 0));
-        Assert.Equal(new[]
-        {
-            "second:2"
-        }, invocations);
+        unicorn.RemoveHook(firstHook);
+        
+        var secondHookInvoked = unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, testAddress, testSize, testValue);
+        Assert.True(secondHookInvoked);
+        Assert.Equal(new[] { "second:2" }, invocations);
 
-        unicorn.RemoveHook(second);
-        Assert.False(unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, 0x6000, 8, 0));
+        unicorn.RemoveHook(secondHook);
+        var noHooksRemain = unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, testAddress, testSize, testValue);
+        Assert.False(noHooksRemain);
     }
 
     [Fact]
@@ -165,18 +203,22 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        uint observed = 0;
+        uint observedInterrupt = 0;
         object? observedState = null;
+        const string expectedState = "intr";
+        const uint expectedInterrupt = 0x21;
 
         var handle = unicorn.AddInterruptHook((engine, interrupt, state) =>
         {
-            observed = interrupt;
+            observedInterrupt = interrupt;
             observedState = state;
-        }, state: "intr");
+        }, state: expectedState);
 
-        Assert.True(unicorn.TrySimulateInterruptHook(handle, 0x21));
-        Assert.Equal(0x21U, observed);
-        Assert.Equal("intr", observedState);
+        var simulationSucceeded = unicorn.TrySimulateInterruptHook(handle, expectedInterrupt);
+        
+        Assert.True(simulationSucceeded);
+        Assert.Equal(expectedInterrupt, observedInterrupt);
+        Assert.Equal(expectedState, observedState);
     }
 
     [Fact]
@@ -185,10 +227,16 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
+        const uint testPort = 0x33;
+        const int testSize = 4;
+        const uint expectedValue = testPort + testSize;
+        
         var handle = unicorn.AddInHook((engine, port, size, state) => port + (uint)size);
 
-        Assert.True(unicorn.TrySimulateInHook(handle, 0x33, 4, out var value));
-        Assert.Equal(0x37U, value);
+        var simulationSucceeded = unicorn.TrySimulateInHook(handle, testPort, testSize, out var actualValue);
+        
+        Assert.True(simulationSucceeded);
+        Assert.Equal(expectedValue, actualValue);
     }
 
     [Fact]
@@ -197,15 +245,21 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        var observed = new List<(uint port, int size, uint value)>();
+        var capturedCalls = new List<(uint port, int size, uint value)>();
+        const uint testPort = 0x20;
+        const int testSize = 1;
+        const uint testValue = 0xAA;
+        
         var handle = unicorn.AddOutHook((engine, port, size, value, state) =>
         {
-            observed.Add((port, size, value));
+            capturedCalls.Add((port, size, value));
         });
 
-        Assert.True(unicorn.TrySimulateOutHook(handle, 0x20, 1, 0xAA));
-        Assert.Single(observed);
-        Assert.Equal((0x20U, 1, 0xAAU), observed[0]);
+        var simulationSucceeded = unicorn.TrySimulateOutHook(handle, testPort, testSize, testValue);
+        
+        Assert.True(simulationSucceeded);
+        Assert.Single(capturedCalls);
+        Assert.Equal((testPort, testSize, testValue), capturedCalls[0]);
     }
 
     [Fact]
@@ -214,14 +268,18 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        object? observed = null;
+        object? observedState = null;
+        const string expectedState = "sys";
+
         var handle = unicorn.AddSyscallHook((engine, state) =>
         {
-            observed = state;
-        }, state: "sys");
+            observedState = state;
+        }, state: expectedState);
 
-        Assert.True(unicorn.TrySimulateSyscallHook(handle));
-        Assert.Equal("sys", observed);
+        var simulationSucceeded = unicorn.TrySimulateSyscallHook(handle);
+        
+        Assert.True(simulationSucceeded);
+        Assert.Equal(expectedState, observedState);
     }
 
     [Fact]
@@ -230,13 +288,16 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        var command = Unicorn.ControlCommand.Read(Unicorn.ControlType.EngineMode, 1);
-        nint argument = 1234;
-        unicorn.Control(command, argument);
+        const int argumentCount = 1;
+        var command = Unicorn.ControlCommand.Read(Unicorn.ControlType.EngineMode, argumentCount);
+        nint expectedArgument = 1234;
+        
+        unicorn.Control(command, expectedArgument);
 
         Assert.True(native.LastControl.HasValue);
-        Assert.Equal(command.Value, native.LastControl.Value.Control);
-        Assert.Equal(new[] { argument }, native.LastControl.Value.Arguments);
+        var (actualCommand, actualArguments) = native.LastControl.Value;
+        Assert.Equal(command.Value, actualCommand);
+        Assert.Equal(new[] { expectedArgument }, actualArguments);
     }
 
     [Fact]
@@ -245,13 +306,16 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        nint ptr = 5678;
-        unicorn.Control(Unicorn.ControlType.PageSize, Unicorn.ControlIo.Read, ptr);
+        nint expectedArgument = 5678;
+        const int expectedArgumentCount = 1;
+        
+        unicorn.Control(Unicorn.ControlType.PageSize, Unicorn.ControlIo.Read, expectedArgument);
 
-        var expected = Unicorn.ControlCommand.Read(Unicorn.ControlType.PageSize, 1);
+        var expectedCommand = Unicorn.ControlCommand.Read(Unicorn.ControlType.PageSize, expectedArgumentCount);
         Assert.True(native.LastControl.HasValue);
-        Assert.Equal(expected.Value, native.LastControl.Value.Control);
-        Assert.Equal(new[] { ptr }, native.LastControl.Value.Arguments);
+        var (actualCommand, actualArguments) = native.LastControl.Value;
+        Assert.Equal(expectedCommand.Value, actualCommand);
+        Assert.Equal(new[] { expectedArgument }, actualArguments);
     }
 
     [Fact]
@@ -260,121 +324,13 @@ public sealed class HookTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
+        const int expectedArgumentCount = 0;
         unicorn.ControlNone(Unicorn.ControlType.TlbFlush);
 
-        var expected = Unicorn.ControlCommand.None(Unicorn.ControlType.TlbFlush, 0);
+        var expectedCommand = Unicorn.ControlCommand.None(Unicorn.ControlType.TlbFlush, expectedArgumentCount);
         Assert.True(native.LastControl.HasValue);
-        Assert.Equal(expected.Value, native.LastControl.Value.Control);
-        Assert.Empty(native.LastControl.Value.Arguments);
-    }
-
-    private sealed class FakeNativeProxy : IUnicornNativeProxy
-    {
-        private nuint _nextHandle;
-
-        public bool Closed { get; private set; }
-
-        public List<nuint> ActiveHooks { get; } = [];
-
-        public List<nuint> RemovedHooks { get; } = [];
-
-        public (uint Control, nint[] Arguments)? LastControl { get; private set; }
-
-        public int Close(IntPtr engine)
-        {
-            Closed = true;
-            return 0;
-        }
-
-        public int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
-        {
-            return RegisterHook(out hookId);
-        }
-
-        public int HookAddMem(IntPtr engine, Unicorn.HookType hookType, NativeMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
-        {
-            return RegisterHook(out hookId);
-        }
-
-        public int HookAddEventMem(IntPtr engine, Unicorn.HookType hookType, NativeEventMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
-        {
-            return RegisterHook(out hookId);
-        }
-
-        public int HookAddInterrupt(IntPtr engine, Unicorn.HookType hookType, NativeInterruptHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
-        {
-            return RegisterHook(out hookId);
-        }
-
-        public int HookAddInstructionIn(IntPtr engine, Unicorn.HookType hookType, NativeInstructionInHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
-        {
-            return RegisterHook(out hookId);
-        }
-
-        public int HookAddInstructionOut(IntPtr engine, Unicorn.HookType hookType, NativeInstructionOutHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
-        {
-            return RegisterHook(out hookId);
-        }
-
-        public int HookAddInstructionSyscall(IntPtr engine, Unicorn.HookType hookType, NativeSyscallHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
-        {
-            return RegisterHook(out hookId);
-        }
-
-        public int HookDel(IntPtr engine, nuint hookId)
-        {
-            ActiveHooks.Remove(hookId);
-            RemovedHooks.Add(hookId);
-            return 0;
-        }
-
-        public int MemMap(IntPtr engine, ulong address, ulong size, uint permissions)
-        {
-            return 0;
-        }
-
-        public int MemProtect(IntPtr engine, ulong address, ulong size, uint permissions)
-        {
-            return 0;
-        }
-
-        public int MemRead(IntPtr engine, ulong address, Span<byte> buffer)
-        {
-            buffer.Clear();
-            return 0;
-        }
-
-        public int MemUnmap(IntPtr engine, ulong address, ulong size)
-        {
-            return 0;
-        }
-
-        public int MemWrite(IntPtr engine, ulong address, ReadOnlySpan<byte> data)
-        {
-            return 0;
-        }
-
-        public int Open(int architecture, int mode, out IntPtr engine)
-        {
-            engine = new IntPtr(0x1234);
-            return 0;
-        }
-
-        public int Control(IntPtr engine, uint control, ReadOnlySpan<nint> arguments)
-        {
-            var args = new nint[arguments.Length];
-            arguments.CopyTo(args);
-            LastControl = (control, args);
-            return 0;
-        }
-
-        public int Errno(IntPtr engine) => 0;
-
-        private int RegisterHook(out nuint hookId)
-        {
-            hookId = ++_nextHandle;
-            ActiveHooks.Add(hookId);
-            return 0;
-        }
+        var (actualCommand, actualArguments) = native.LastControl.Value;
+        Assert.Equal(expectedCommand.Value, actualCommand);
+        Assert.Empty(actualArguments);
     }
 }
