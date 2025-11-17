@@ -248,6 +248,17 @@ public partial class Unicorn : IDisposable
         Control(type, ControlIo.None);
     }
 
+    /// <summary>
+    /// Removes cached translation blocks for the specified address range.
+    /// This is useful when code has been modified at runtime and the translation cache needs to be invalidated.
+    /// </summary>
+    /// <param name="address">The start address of the range to remove from cache</param>
+    /// <param name="end">The end address of the range to remove from cache</param>
+    public void RemoveCache(ulong address, ulong end)
+    {
+        ControlWrite(ControlType.TranslationBlockRemove, (nint)address, (nint)end);
+    }
+
     public ErrorCode GetLastError()
     {
         EnsureNotDisposed();
