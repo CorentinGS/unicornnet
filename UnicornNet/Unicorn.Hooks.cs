@@ -140,12 +140,6 @@ public partial class Unicorn
         return RegisterSyscallHook(wrapper, range, state);
     }
 
-    public HookHandle AddEventMemHook(MemoryAccessType accessType, MemoryEventHook callback, HookRange? range = null, object? state = null)
-    {
-        ArgumentNullException.ThrowIfNull(callback);
-        return RegisterEventMemHook(accessType, callback, range, state);
-    }
-
     /// <summary>
     /// Adds an event memory hook that can monitor multiple event types using a hook-type bitmask
     /// </summary>
@@ -153,16 +147,6 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         return RegisterEventMemHook(eventTypes, callback, range, state);
-    }
-
-    /// <summary>
-    /// Adds a memory event hook with a strongly-typed state parameter to avoid boxing
-    /// </summary>
-    public HookHandle AddEventMemHook<TState>(MemoryAccessType accessType, MemoryEventHook<TState> callback, HookRange? range = null, TState? state = default)
-    {
-        ArgumentNullException.ThrowIfNull(callback);
-        MemoryEventHook wrapper = (engine, accessType2, address, size, value, boxedState) => callback(engine, accessType2, address, size, value, (TState)boxedState!);
-        return RegisterEventMemHook(accessType, wrapper, range, state);
     }
 
     /// <summary>

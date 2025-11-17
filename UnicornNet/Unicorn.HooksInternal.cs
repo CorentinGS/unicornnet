@@ -14,15 +14,6 @@ public partial class Unicorn
         | HookType.MemReadProt
         | HookType.MemWriteProt
         | HookType.MemFetchProt;
-    private static readonly (HookType Flag, MemoryAccessType AccessType)[] EventMemoryHookMappings =
-    {
-        (HookType.MemReadUnmapped, MemoryAccessType.ReadUnmapped),
-        (HookType.MemWriteUnmapped, MemoryAccessType.WriteUnmapped),
-        (HookType.MemFetchUnmapped, MemoryAccessType.FetchUnmapped),
-        (HookType.MemReadProt, MemoryAccessType.ReadProtected),
-        (HookType.MemWriteProt, MemoryAccessType.WriteProtected),
-        (HookType.MemFetchProt, MemoryAccessType.FetchProtected),
-    };
 
     internal bool TrySimulateHook(HookHandle handle, ulong address, int size)
     {
@@ -152,33 +143,17 @@ public partial class Unicorn
             });
     }
 
-    private HookHandle RegisterEventMemHook(MemoryAccessType accessType, MemoryEventHook callback, HookRange? range, object? state)
-    {
-        if (!IsEventMemoryType(accessType))
-        {
-            throw new ArgumentOutOfRangeException(nameof(accessType), "Only unmapped and protected accesses are valid event types.");
-        }
-
-        var hookType = GetHookTypeForEvent(accessType);
-        return RegisterEventMemHook(hookType, callback, range, state, accessType);
-    }
-
     private HookHandle RegisterEventMemHook(HookType eventTypes, MemoryEventHook callback, HookRange? range, object? state)
     {
         var normalizedHookTypes = NormalizeEventHookTypes(eventTypes);
-        return RegisterEventMemHook(normalizedHookTypes, callback, range, state, null);
-    }
-
-    private HookHandle RegisterEventMemHook(HookType hookTypes, MemoryEventHook callback, HookRange? range, object? state, MemoryAccessType? accessType)
-    {
         var normalizedRange = NormalizeRange(range);
-        var registration = new HookRegistration(this, hookTypes, HookCategory.EventMemory, callback, state, accessType);
+        var registration = new HookRegistration(this, normalizedHookTypes, HookCategory.EventMemory, callback, state);
         return RegisterHookInternal(
             registration,
             normalizedRange,
             (engine, hookRange) =>
             {
-                var err = _native.HookAddEventMem(engine, hookTypes, EventMemHookThunk, registration.UserDataPointer, hookRange.Begin, hookRange.End, out var hookId);
+                var err = _native.HookAddEventMem(engine, normalizedHookTypes, EventMemHookThunk, registration.UserDataPointer, hookRange.Begin, hookRange.End, out var hookId);
                 return (err, hookId);
             });
     }
@@ -307,37 +282,18 @@ public partial class Unicorn
             yield break;
         }
 
-        foreach (var (flag, accessType) in EventMemoryHookMappings)
-        {
-            if ((registration.Type & flag) != 0)
-            {
-                yield return accessType;
-            }
-        }
-    }
-
-    private static bool IsEventMemoryType(MemoryAccessType accessType)
-    {
-        return accessType is MemoryAccessType.ReadUnmapped
-            or MemoryAccessType.WriteUnmapped
-            or MemoryAccessType.FetchUnmapped
-            or MemoryAccessType.ReadProtected
-            or MemoryAccessType.WriteProtected
-            or MemoryAccessType.FetchProtected;
-    }
-
-    private static HookType GetHookTypeForEvent(MemoryAccessType accessType)
-    {
-        return accessType switch
-        {
-            MemoryAccessType.ReadUnmapped => HookType.MemReadUnmapped,
-            MemoryAccessType.WriteUnmapped => HookType.MemWriteUnmapped,
-            MemoryAccessType.FetchUnmapped => HookType.MemFetchUnmapped,
-            MemoryAccessType.ReadProtected => HookType.MemReadProt,
-            MemoryAccessType.WriteProtected => HookType.MemWriteProt,
-            MemoryAccessType.FetchProtected => HookType.MemFetchProt,
-            _ => throw new ArgumentOutOfRangeException(nameof(accessType))
-        };
+        if ((registration.Type & HookType.MemReadUnmapped) != 0)
+            yield return MemoryAccessType.ReadUnmapped;
+        if ((registration.Type & HookType.MemWriteUnmapped) != 0)
+            yield return MemoryAccessType.WriteUnmapped;
+        if ((registration.Type & HookType.MemFetchUnmapped) != 0)
+            yield return MemoryAccessType.FetchUnmapped;
+        if ((registration.Type & HookType.MemReadProt) != 0)
+            yield return MemoryAccessType.ReadProtected;
+        if ((registration.Type & HookType.MemWriteProt) != 0)
+            yield return MemoryAccessType.WriteProtected;
+        if ((registration.Type & HookType.MemFetchProt) != 0)
+            yield return MemoryAccessType.FetchProtected;
     }
 
     private static HookType NormalizeEventHookTypes(HookType eventTypes)

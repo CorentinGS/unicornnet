@@ -102,17 +102,6 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add an event memory hook (unmapped/protected memory access)
-    /// </summary>
-    public HookBuilder OnEventMem(Unicorn.MemoryAccessType accessType, Unicorn.MemoryEventHook callback, Unicorn.HookRange? range = null, object? state = null)
-    {
-        ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddEventMemHook(accessType, callback, range, state);
-        _handles.Add(handle);
-        return this;
-    }
-
-    /// <summary>
     /// Add an event memory hook that listens to multiple event types described by a HookType mask
     /// </summary>
     public HookBuilder OnEventMem(Unicorn.HookType eventTypes, Unicorn.MemoryEventHook callback, Unicorn.HookRange? range = null, object? state = null)

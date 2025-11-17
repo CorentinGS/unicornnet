@@ -167,14 +167,14 @@ public sealed class HookTests
         const int testSize = 8;
         const long testValue = 0;
         
-        var firstHook = unicorn.AddEventMemHook(MemoryAccessType.ReadUnmapped, 
+        var firstHook = unicorn.AddEventMemHook(Unicorn.HookType.MemReadUnmapped,
             (engine, type, address, size, value, state) =>
             {
                 invocations.Add($"first:{state}");
                 return true;
             }, state: firstState);
 
-        var secondHook = unicorn.AddEventMemHook(MemoryAccessType.ReadUnmapped, 
+        var secondHook = unicorn.AddEventMemHook(Unicorn.HookType.MemReadUnmapped,
             (engine, type, address, size, value, state) =>
             {
                 invocations.Add($"second:{state}");
