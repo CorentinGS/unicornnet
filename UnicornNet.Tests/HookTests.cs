@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Xunit;
 using MemoryAccessType = UnicornNet.Unicorn.MemoryAccessType;
@@ -6,7 +5,7 @@ using MemoryAccessType = UnicornNet.Unicorn.MemoryAccessType;
 namespace UnicornNet.Tests;
 
 /// <summary>
-/// Tests for Unicorn hook registration, invocation, and lifecycle management.
+///     Tests for Unicorn hook registration, invocation, and lifecycle management.
 /// </summary>
 public sealed class HookTests
 {
@@ -34,7 +33,7 @@ public sealed class HookTests
         }, state: expectedState);
 
         var simulationSucceeded = unicorn.TrySimulateHook(handle, expectedAddress, expectedSize);
-        
+
         Assert.True(simulationSucceeded);
         Assert.Equal(1, invocationCount);
         Assert.Equal(expectedState, observedState);
@@ -52,7 +51,7 @@ public sealed class HookTests
         unicorn.RemoveHook(handle);
 
         var simulationAttempted = unicorn.TrySimulateHook(handle, 0x2000, 8);
-        
+
         Assert.False(simulationAttempted);
         Assert.Equal(0, invocationCount);
         Assert.Contains(handle.Value, native.RemovedHooks);
@@ -69,7 +68,7 @@ public sealed class HookTests
         unicorn.HookDel(handle);
 
         var simulationAttempted = unicorn.TrySimulateHook(handle, 0x3000, 2);
-        
+
         Assert.False(simulationAttempted);
         Assert.Single(native.RemovedHooks);
         Assert.Contains(handle.Value, native.RemovedHooks);
@@ -104,7 +103,7 @@ public sealed class HookTests
         var observedSize = 0;
         long observedValue = 0;
         object? observedState = null;
-        
+
         const string expectedState = "mem";
         const ulong expectedAddress = 0x4000;
         const int expectedSize = 4;
@@ -120,7 +119,7 @@ public sealed class HookTests
         }, state: expectedState);
 
         var simulationSucceeded = unicorn.TrySimulateMemoryHook(handle, MemoryAccessType.Read, expectedAddress, expectedSize, expectedValue);
-        
+
         Assert.True(simulationSucceeded);
         Assert.Equal(MemoryAccessType.Read, observedType);
         Assert.Equal(expectedAddress, observedAddress);
@@ -139,17 +138,17 @@ public sealed class HookTests
         const ulong expectedAddress = 0x5000;
         const int expectedSize = 2;
         const long expectedValue = 0xFF;
-        
+
         var handle = unicorn.AddMemWriteHook((engine, type, address, size, value, state) =>
         {
-            wasInvokedCorrectly = type == MemoryAccessType.Write 
-                && address == expectedAddress 
-                && size == expectedSize 
-                && value == expectedValue;
+            wasInvokedCorrectly = type == MemoryAccessType.Write
+                                  && address == expectedAddress
+                                  && size == expectedSize
+                                  && value == expectedValue;
         });
 
         var simulationSucceeded = unicorn.TrySimulateMemoryHook(handle, MemoryAccessType.Write, expectedAddress, expectedSize, expectedValue);
-        
+
         Assert.True(simulationSucceeded);
         Assert.True(wasInvokedCorrectly);
     }
@@ -166,7 +165,7 @@ public sealed class HookTests
         const ulong testAddress = 0x6000;
         const int testSize = 8;
         const long testValue = 0;
-        
+
         var firstHook = unicorn.AddEventMemHook(Unicorn.HookType.MemReadUnmapped,
             (engine, type, address, size, value, state) =>
             {
@@ -183,14 +182,21 @@ public sealed class HookTests
 
         var bothHooksInvoked = unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, testAddress, testSize, testValue);
         Assert.True(bothHooksInvoked);
-        Assert.Equal(new[] { "first:1", "second:2" }, invocations);
+        Assert.Equal(new[]
+        {
+            "first:1",
+            "second:2"
+        }, invocations);
 
         invocations.Clear();
         unicorn.RemoveHook(firstHook);
-        
+
         var secondHookInvoked = unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, testAddress, testSize, testValue);
         Assert.True(secondHookInvoked);
-        Assert.Equal(new[] { "second:2" }, invocations);
+        Assert.Equal(new[]
+        {
+            "second:2"
+        }, invocations);
 
         unicorn.RemoveHook(secondHook);
         var noHooksRemain = unicorn.TrySimulateEventMem(MemoryAccessType.ReadUnmapped, testAddress, testSize, testValue);
@@ -243,7 +249,7 @@ public sealed class HookTests
         }, state: expectedState);
 
         var simulationSucceeded = unicorn.TrySimulateInterruptHook(handle, expectedInterrupt);
-        
+
         Assert.True(simulationSucceeded);
         Assert.Equal(expectedInterrupt, observedInterrupt);
         Assert.Equal(expectedState, observedState);
@@ -258,11 +264,11 @@ public sealed class HookTests
         const uint testPort = 0x33;
         const int testSize = 4;
         const uint expectedValue = testPort + testSize;
-        
+
         var handle = unicorn.AddInHook((engine, port, size, state) => port + (uint)size);
 
         var simulationSucceeded = unicorn.TrySimulateInHook(handle, testPort, testSize, out var actualValue);
-        
+
         Assert.True(simulationSucceeded);
         Assert.Equal(expectedValue, actualValue);
     }
@@ -277,14 +283,14 @@ public sealed class HookTests
         const uint testPort = 0x20;
         const int testSize = 1;
         const uint testValue = 0xAA;
-        
+
         var handle = unicorn.AddOutHook((engine, port, size, value, state) =>
         {
             capturedCalls.Add((port, size, value));
         });
 
         var simulationSucceeded = unicorn.TrySimulateOutHook(handle, testPort, testSize, testValue);
-        
+
         Assert.True(simulationSucceeded);
         Assert.Single(capturedCalls);
         Assert.Equal((testPort, testSize, testValue), capturedCalls[0]);
@@ -305,7 +311,7 @@ public sealed class HookTests
         }, state: expectedState);
 
         var simulationSucceeded = unicorn.TrySimulateSyscallHook(handle);
-        
+
         Assert.True(simulationSucceeded);
         Assert.Equal(expectedState, observedState);
     }
@@ -319,13 +325,16 @@ public sealed class HookTests
         const int argumentCount = 1;
         var command = Unicorn.ControlCommand.Read(Unicorn.ControlType.EngineMode, argumentCount);
         nint expectedArgument = 1234;
-        
+
         unicorn.Control(command, expectedArgument);
 
         Assert.True(native.LastControl.HasValue);
         var (actualCommand, actualArguments) = native.LastControl.Value;
         Assert.Equal(command.Value, actualCommand);
-        Assert.Equal(new[] { expectedArgument }, actualArguments);
+        Assert.Equal(new[]
+        {
+            expectedArgument
+        }, actualArguments);
     }
 
     [Fact]
@@ -336,14 +345,17 @@ public sealed class HookTests
 
         nint expectedArgument = 5678;
         const int expectedArgumentCount = 1;
-        
+
         unicorn.Control(Unicorn.ControlType.PageSize, Unicorn.ControlIo.Read, expectedArgument);
 
         var expectedCommand = Unicorn.ControlCommand.Read(Unicorn.ControlType.PageSize, expectedArgumentCount);
         Assert.True(native.LastControl.HasValue);
         var (actualCommand, actualArguments) = native.LastControl.Value;
         Assert.Equal(expectedCommand.Value, actualCommand);
-        Assert.Equal(new[] { expectedArgument }, actualArguments);
+        Assert.Equal(new[]
+        {
+            expectedArgument
+        }, actualArguments);
     }
 
     [Fact]
@@ -377,7 +389,11 @@ public sealed class HookTests
         Assert.True(native.LastControl.HasValue);
         var (actualCommand, actualArguments) = native.LastControl.Value;
         Assert.Equal(expectedCommand.Value, actualCommand);
-        Assert.Equal(new[] { (nint)startAddress, (nint)endAddress }, actualArguments);
+        Assert.Equal(new[]
+        {
+            (nint)startAddress,
+            (nint)endAddress
+        }, actualArguments);
     }
 
     [Fact]

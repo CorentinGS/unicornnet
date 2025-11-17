@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace UnicornNet.Tests;
 
 /// <summary>
-/// Test double for IUnicornNativeProxy that tracks method calls and provides controllable behavior.
+///     Test double for IUnicornNativeProxy that tracks method calls and provides controllable behavior.
 /// </summary>
 internal class FakeNativeProxy : IUnicornNativeProxy
 {

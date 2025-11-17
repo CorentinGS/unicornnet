@@ -1,13 +1,10 @@
 namespace UnicornNet;
 
 /// <summary>
-/// Base exception for all Unicorn engine errors
+///     Base exception for all Unicorn engine errors
 /// </summary>
 public class UnicornException : Exception
 {
-    public Unicorn.ErrorCode ErrorCode { get; }
-    public string Operation { get; }
-
     public UnicornException(Unicorn.ErrorCode errorCode, string operation)
         : base($"{operation} failed with error code {errorCode} ({(int)errorCode})")
     {
@@ -28,10 +25,12 @@ public class UnicornException : Exception
         ErrorCode = errorCode;
         Operation = operation;
     }
+    public Unicorn.ErrorCode ErrorCode { get; }
+    public string Operation { get; }
 }
 
 /// <summary>
-/// Exception thrown when engine initialization or control operations fail
+///     Exception thrown when engine initialization or control operations fail
 /// </summary>
 public class UnicornEngineException : UnicornException
 {
@@ -52,13 +51,10 @@ public class UnicornEngineException : UnicornException
 }
 
 /// <summary>
-/// Exception thrown when memory operations fail
+///     Exception thrown when memory operations fail
 /// </summary>
 public class UnicornMemoryException : UnicornException
 {
-    public ulong? Address { get; }
-    public ulong? Size { get; }
-
     public UnicornMemoryException(Unicorn.ErrorCode errorCode, string operation, ulong? address = null, ulong? size = null)
         : base(errorCode, operation, BuildMessage(errorCode, operation, address, size))
     {
@@ -72,6 +68,8 @@ public class UnicornMemoryException : UnicornException
         Address = address;
         Size = size;
     }
+    public ulong? Address { get; }
+    public ulong? Size { get; }
 
     private static string BuildMessage(Unicorn.ErrorCode errorCode, string operation, ulong? address, ulong? size)
     {
@@ -80,21 +78,21 @@ public class UnicornMemoryException : UnicornException
         {
             msg += $" at address 0x{address.Value:X}";
         }
+
         if (size.HasValue)
         {
             msg += $" (size: 0x{size.Value:X})";
         }
+
         return msg;
     }
 }
 
 /// <summary>
-/// Exception thrown when hook operations fail
+///     Exception thrown when hook operations fail
 /// </summary>
 public class UnicornHookException : UnicornException
 {
-    public Unicorn.HookType? HookType { get; }
-
     public UnicornHookException(Unicorn.ErrorCode errorCode, string operation, Unicorn.HookType? hookType = null)
         : base(errorCode, operation, BuildMessage(errorCode, operation, hookType))
     {
@@ -106,6 +104,7 @@ public class UnicornHookException : UnicornException
     {
         HookType = hookType;
     }
+    public Unicorn.HookType? HookType { get; }
 
     private static string BuildMessage(Unicorn.ErrorCode errorCode, string operation, Unicorn.HookType? hookType)
     {
@@ -114,6 +113,7 @@ public class UnicornHookException : UnicornException
         {
             msg += $" (hook type: {hookType.Value})";
         }
+
         return msg;
     }
 }

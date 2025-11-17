@@ -1,26 +1,26 @@
 namespace UnicornNet;
 
 /// <summary>
-/// Represents a mapped memory region with RAII semantics
+///     Represents a mapped memory region with RAII semantics
 /// </summary>
 public readonly struct MemoryRegion : IDisposable
 {
     private readonly Unicorn _engine;
 
     /// <summary>
-    /// The base address of the memory region
+    ///     The base address of the memory region
     /// </summary>
     public ulong Address { get; }
 
     /// <summary>
-    /// The size of the memory region in bytes
+    ///     The size of the memory region in bytes
     /// </summary>
     public ulong Size { get; }
 
     /// <summary>
-    /// The permissions for this memory region at the time of creation.
-    /// Note: This is a snapshot value. If <see cref="Protect"/> is called to change permissions,
-    /// this property will NOT reflect the updated permissions. Query the engine directly if you need current permissions.
+    ///     The permissions for this memory region at the time of creation.
+    ///     Note: This is a snapshot value. If <see cref="Protect" /> is called to change permissions,
+    ///     this property will NOT reflect the updated permissions. Query the engine directly if you need current permissions.
     /// </summary>
     public Unicorn.MemoryPermissions Permissions { get; }
 
@@ -33,7 +33,7 @@ public readonly struct MemoryRegion : IDisposable
     }
 
     /// <summary>
-    /// Write data to this memory region
+    ///     Write data to this memory region
     /// </summary>
     public readonly void Write(ReadOnlySpan<byte> data, ulong offset = 0)
     {
@@ -46,7 +46,7 @@ public readonly struct MemoryRegion : IDisposable
     }
 
     /// <summary>
-    /// Read data from this memory region
+    ///     Read data from this memory region
     /// </summary>
     public readonly void Read(Span<byte> buffer, ulong offset = 0)
     {
@@ -59,7 +59,7 @@ public readonly struct MemoryRegion : IDisposable
     }
 
     /// <summary>
-    /// Change the permissions of this memory region
+    ///     Change the permissions of this memory region
     /// </summary>
     public readonly void Protect(Unicorn.MemoryPermissions permissions)
     {
@@ -67,7 +67,7 @@ public readonly struct MemoryRegion : IDisposable
     }
 
     /// <summary>
-    /// Unmap this memory region
+    ///     Unmap this memory region
     /// </summary>
     public readonly void Dispose()
     {
@@ -75,7 +75,7 @@ public readonly struct MemoryRegion : IDisposable
     }
 
     /// <summary>
-    /// Returns the end address (Address + Size)
+    ///     Returns the end address (Address + Size)
     /// </summary>
     public ulong EndAddress
     {
@@ -83,7 +83,7 @@ public readonly struct MemoryRegion : IDisposable
     }
 
     /// <summary>
-    /// Check if an address is within this region
+    ///     Check if an address is within this region
     /// </summary>
     public readonly bool Contains(ulong address)
     {
@@ -91,10 +91,10 @@ public readonly struct MemoryRegion : IDisposable
     }
 
     /// <summary>
-    /// Check if an address range is fully contained within this region
+    ///     Check if an address range is fully contained within this region
     /// </summary>
     public readonly bool Contains(ulong address, ulong size)
     {
-        return address >= Address && (address + size) <= EndAddress;
+        return address >= Address && address + size <= EndAddress;
     }
 }

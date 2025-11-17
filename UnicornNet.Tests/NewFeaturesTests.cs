@@ -4,7 +4,7 @@ using Xunit;
 namespace UnicornNet.Tests;
 
 /// <summary>
-/// Tests for new features added to UnicornNet, including memory regions, exceptions, and advanced operations.
+///     Tests for new features added to UnicornNet, including memory regions, exceptions, and advanced operations.
 /// </summary>
 public sealed class NewFeaturesTests
 {
@@ -50,7 +50,7 @@ public sealed class NewFeaturesTests
         Assert.True(region.Contains(BaseAddress, RegionSize));
         Assert.False(region.Contains(BaseAddress, exceedsRegionByOne));
         Assert.False(region.Contains(BaseAddress - 1, smallSize));
-        var overlapsEndAddress = BaseAddress + RegionSize - (largeSize / 2);
+        var overlapsEndAddress = BaseAddress + RegionSize - largeSize / 2;
         Assert.False(region.Contains(overlapsEndAddress, largeSize));
     }
 
@@ -72,12 +72,12 @@ public sealed class NewFeaturesTests
         const ulong testAddress = 0xDEADBEEF;
         const ulong testSize = 0x100;
         const string operationName = "uc_mem_write";
-        
+
         var exception = new UnicornMemoryException(
             Unicorn.ErrorCode.WriteUnmapped,
             operationName,
-            address: testAddress,
-            size: testSize);
+            testAddress,
+            testSize);
 
         Assert.Equal(Unicorn.ErrorCode.WriteUnmapped, exception.ErrorCode);
         Assert.Equal(testAddress, exception.Address);
@@ -90,11 +90,11 @@ public sealed class NewFeaturesTests
     {
         const string operationName = "uc_hook_add";
         const Unicorn.HookType expectedHookType = Unicorn.HookType.Code;
-        
+
         var exception = new UnicornHookException(
             Unicorn.ErrorCode.Hook,
             operationName,
-            hookType: expectedHookType);
+            expectedHookType);
 
         Assert.Equal(Unicorn.ErrorCode.Hook, exception.ErrorCode);
         Assert.Equal(expectedHookType, exception.HookType);
@@ -111,7 +111,7 @@ public sealed class NewFeaturesTests
         const ulong size = 0x2000;
         const Unicorn.MemoryPermissions permissions = Unicorn.MemoryPermissions.Read | Unicorn.MemoryPermissions.Write;
         var pointer = new IntPtr(0xABCDEF);
-        
+
         unicorn.MemMapPtr(address, size, permissions, pointer);
 
         Assert.Single(native.MemMapPtrRequests);
@@ -130,8 +130,8 @@ public sealed class NewFeaturesTests
 
         const ulong address = 0x4000;
         const ulong size = 0x1000;
-        
-        Assert.Throws<ArgumentException>(() => 
+
+        Assert.Throws<ArgumentException>(() =>
             unicorn.MemMapPtr(address, size, Unicorn.MemoryPermissions.All, IntPtr.Zero));
     }
 
@@ -142,8 +142,14 @@ public sealed class NewFeaturesTests
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
         const int registerId = 2;
-        var testData = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF };
-        
+        var testData = new byte[]
+        {
+            0xDE,
+            0xAD,
+            0xBE,
+            0xEF
+        };
+
         unicorn.RegWrite(registerId, testData);
 
         Assert.True(native.LastRegisterWrite.HasValue);
@@ -159,7 +165,7 @@ public sealed class NewFeaturesTests
 
         var register = Unicorn.Registers.X86.RAX;
         const ulong testValue = 0x1122334455667788UL;
-        
+
         unicorn.RegWrite(register, testValue);
 
         Assert.True(native.LastRegisterWrite.HasValue);
@@ -172,9 +178,15 @@ public sealed class NewFeaturesTests
     {
         var native = new FakeNativeProxy();
         const int registerId = 5;
-        var expectedData = new byte[] { 1, 2, 3, 4 };
+        var expectedData = new byte[]
+        {
+            1,
+            2,
+            3,
+            4
+        };
         native.RegisterValues[registerId] = expectedData;
-        
+
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
         Span<byte> buffer = stackalloc byte[4];
@@ -190,7 +202,7 @@ public sealed class NewFeaturesTests
         var register = Unicorn.Registers.X86.RBX;
         const long expectedValue = 0x0102030405060708;
         native.RegisterValues[(int)register] = BitConverter.GetBytes(expectedValue);
-        
+
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
         var actualValue = unicorn.RegRead<Unicorn.Registers.X86, long>(register);
@@ -205,8 +217,11 @@ public sealed class NewFeaturesTests
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
         const int registerId = 1;
-        var testData = new byte[] { 0x1 };
-        
+        var testData = new byte[]
+        {
+            0x1
+        };
+
         Assert.Throws<UnicornEngineException>(() => unicorn.RegWrite(registerId, testData));
     }
 
@@ -218,7 +233,7 @@ public sealed class NewFeaturesTests
 
         const int registerId = 1;
         var buffer = new byte[8];
-        
+
         Assert.Throws<UnicornEngineException>(() => unicorn.RegRead(registerId, buffer));
     }
 
@@ -231,8 +246,8 @@ public sealed class NewFeaturesTests
         const ulong address = 0x0;
         const ulong size = 0x1000;
         var pointer = new IntPtr(1);
-        
-        Assert.Throws<UnicornMemoryException>(() => 
+
+        Assert.Throws<UnicornMemoryException>(() =>
             unicorn.MemMapPtr(address, size, Unicorn.MemoryPermissions.Read, pointer));
     }
 

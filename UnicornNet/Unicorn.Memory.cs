@@ -3,7 +3,7 @@ namespace UnicornNet;
 public partial class Unicorn
 {
     /// <summary>
-    /// Map a memory region and return a MemoryRegion helper for managing it
+    ///     Map a memory region and return a MemoryRegion helper for managing it
     /// </summary>
     public MemoryRegion MapRegion(ulong address, ulong size, MemoryPermissions permissions)
     {

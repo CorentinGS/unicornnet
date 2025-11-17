@@ -3,7 +3,7 @@ namespace UnicornNet;
 public partial class Unicorn
 {
     /// <summary>
-    /// Returns a fluent builder for registering multiple hooks
+    ///     Returns a fluent builder for registering multiple hooks
     /// </summary>
     public HookBuilder Hooks()
     {
@@ -18,7 +18,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds a code hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds a code hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddCodeHook<TState>(CodeHook<TState> callback, HookRange? range = null, TState? state = default)
     {
@@ -35,7 +35,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds a block hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds a block hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddBlockHook<TState>(BlockHook<TState> callback, HookRange? range = null, TState? state = default)
     {
@@ -51,7 +51,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds a memory read hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds a memory read hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddMemReadHook<TState>(MemoryHook<TState> callback, HookRange? range = null, TState? state = default)
     {
@@ -67,7 +67,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds a memory write hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds a memory write hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddMemWriteHook<TState>(MemoryHook<TState> callback, HookRange? range = null, TState? state = default)
     {
@@ -83,7 +83,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds an interrupt hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds an interrupt hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddInterruptHook<TState>(InterruptHook<TState> callback, HookRange? range = null, TState? state = default)
     {
@@ -99,7 +99,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds an IN instruction hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds an IN instruction hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddInHook<TState>(InHook<TState> callback, HookRange? range = null, TState? state = default)
     {
@@ -115,7 +115,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds an OUT instruction hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds an OUT instruction hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddOutHook<TState>(OutHook<TState> callback, HookRange? range = null, TState? state = default)
     {
@@ -131,7 +131,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds a syscall hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds a syscall hook with a strongly-typed state parameter to avoid boxing
     /// </summary>
     public HookHandle AddSyscallHook<TState>(SyscallHook<TState> callback, HookRange? range = null, TState? state = default)
     {
@@ -140,6 +140,63 @@ public partial class Unicorn
         return RegisterSyscallHook(wrapper, range, state);
     }
 
+    /// <summary>
+    ///     Adds a hook that will be called when the emulator encounters an invalid instruction.
+    /// </summary>
+    /// <param name="callback">
+    ///     The callback to invoke when an invalid instruction is encountered.
+    ///     Should return true to continue emulation, false to stop.
+    /// </param>
+    /// <param name="range">The address range for which this hook is active (null for all addresses).</param>
+    /// <param name="state">Optional user state to pass to the callback.</param>
+    /// <returns>A handle that can be used to remove this hook later.</returns>
+    /// <remarks>
+    ///     <para>
+    ///         <b>Error Handling:</b>
+    ///     </para>
+    ///     <para>
+    ///         If your callback throws an exception, the behavior depends on
+    ///         <see cref="UnicornOptions.CallbackExceptionHandling" />:
+    ///         <list type="bullet">
+    ///             <item>
+    ///                 <description>
+    ///                     <see cref="CallbackExceptionHandling.Throw" /> (default): The exception is rethrown
+    ///                     immediately
+    ///                 </description>
+    ///             </item>
+    ///             <item>
+    ///                 <description>
+    ///                     <see cref="CallbackExceptionHandling.LogAndThrow" />: The exception is logged then
+    ///                     rethrown
+    ///                 </description>
+    ///             </item>
+    ///             <item>
+    ///                 <description>
+    ///                     <see cref="CallbackExceptionHandling.LogAndContinue" />: The exception is logged and the
+    ///                     hook returns false (stops emulation)
+    ///                 </description>
+    ///             </item>
+    ///         </list>
+    ///     </para>
+    ///     <para>
+    ///         <b>Diagnostic Context:</b>
+    ///     </para>
+    ///     <para>
+    ///         To get detailed information about the invalid instruction (PC, instruction bytes),
+    ///         call <see cref="GetInvalidInstructionContext" /> from within your callback.
+    ///     </para>
+    ///     <para>
+    ///         <b>Example:</b>
+    ///     </para>
+    ///     <code>
+    /// unicorn.AddInvalidInstructionHook((engine, state) =>
+    /// {
+    ///     var context = engine.GetInvalidInstructionContext();
+    ///     Console.WriteLine($"Invalid instruction: {context.GetDetailedMessage()}");
+    ///     return false; // Stop emulation
+    /// });
+    /// </code>
+    /// </remarks>
     public HookHandle AddInvalidInstructionHook(InvalidInstructionHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
@@ -147,8 +204,21 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds an invalid instruction hook with a strongly-typed state parameter to avoid boxing
+    ///     Adds an invalid instruction hook with a strongly-typed state parameter to avoid boxing.
     /// </summary>
+    /// <typeparam name="TState">The type of the state parameter.</typeparam>
+    /// <param name="callback">
+    ///     The callback to invoke when an invalid instruction is encountered.
+    ///     Should return true to continue emulation, false to stop.
+    /// </param>
+    /// <param name="range">The address range for which this hook is active (null for all addresses).</param>
+    /// <param name="state">Optional user state to pass to the callback.</param>
+    /// <returns>A handle that can be used to remove this hook later.</returns>
+    /// <remarks>
+    ///     See <see cref="AddInvalidInstructionHook(InvalidInstructionHook, HookRange?, object?)" /> for detailed
+    ///     documentation
+    ///     on error handling and diagnostic capabilities.
+    /// </remarks>
     public HookHandle AddInvalidInstructionHook<TState>(InvalidInstructionHook<TState> callback, HookRange? range = null, TState? state = default)
     {
         ArgumentNullException.ThrowIfNull(callback);
@@ -157,7 +227,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds an event memory hook that can monitor multiple event types using a hook-type bitmask
+    ///     Adds an event memory hook that can monitor multiple event types using a hook-type bitmask
     /// </summary>
     public HookHandle AddEventMemHook(HookType eventTypes, MemoryEventHook callback, HookRange? range = null, object? state = null)
     {
@@ -166,7 +236,7 @@ public partial class Unicorn
     }
 
     /// <summary>
-    /// Adds a memory event hook with a strongly-typed state parameter that can listen to multiple hook types
+    ///     Adds a memory event hook with a strongly-typed state parameter that can listen to multiple hook types
     /// </summary>
     public HookHandle AddEventMemHook<TState>(HookType eventTypes, MemoryEventHook<TState> callback, HookRange? range = null, TState? state = default)
     {

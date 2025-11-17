@@ -1,19 +1,19 @@
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace UnicornNet;
 
 public partial class Unicorn
 {
+    private const HookType EventMemoryHookMask = HookType.MemReadUnmapped
+                                                 | HookType.MemWriteUnmapped
+                                                 | HookType.MemFetchUnmapped
+                                                 | HookType.MemReadProt
+                                                 | HookType.MemWriteProt
+                                                 | HookType.MemFetchProt;
+
     private readonly ConcurrentDictionary<MemoryAccessType, ConcurrentDictionary<nuint, byte>> _eventMemRegistrations = new();
     private readonly ConcurrentDictionary<nuint, HookRegistration> _hookRegistry = new();
-    private const HookType EventMemoryHookMask = HookType.MemReadUnmapped
-        | HookType.MemWriteUnmapped
-        | HookType.MemFetchUnmapped
-        | HookType.MemReadProt
-        | HookType.MemWriteProt
-        | HookType.MemFetchProt;
 
     internal bool TrySimulateHook(HookHandle handle, ulong address, int size)
     {
@@ -24,10 +24,9 @@ public partial class Unicorn
 
         if (registration.Category is not (HookCategory.Code or HookCategory.Block))
             return false;
-        
+
         registration.InvokeCode(address, size);
         return true;
-
     }
 
     internal bool TrySimulateMemoryHook(HookHandle handle, MemoryAccessType accessType, ulong address, int size, long value)
@@ -351,6 +350,7 @@ public partial class Unicorn
             {
                 throw new InvalidOperationException($"Hook {handle} was not registered.");
             }
+
             return;
         }
 

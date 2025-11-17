@@ -1,7 +1,7 @@
 namespace UnicornNet;
 
 /// <summary>
-/// Fluent API for registering multiple hooks at once
+///     Fluent API for registering multiple hooks at once
 /// </summary>
 public sealed class HookBuilder
 {
@@ -14,7 +14,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add a code hook that triggers on every instruction
+    ///     Add a code hook that triggers on every instruction
     /// </summary>
     public HookBuilder OnCode(Unicorn.CodeHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -25,7 +25,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add a block hook that triggers on every basic block
+    ///     Add a block hook that triggers on every basic block
     /// </summary>
     public HookBuilder OnBlock(Unicorn.BlockHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -36,7 +36,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add a memory read hook
+    ///     Add a memory read hook
     /// </summary>
     public HookBuilder OnMemoryRead(Unicorn.MemoryHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -47,7 +47,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add a memory write hook
+    ///     Add a memory write hook
     /// </summary>
     public HookBuilder OnMemoryWrite(Unicorn.MemoryHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -58,7 +58,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add an interrupt hook
+    ///     Add an interrupt hook
     /// </summary>
     public HookBuilder OnInterrupt(Unicorn.InterruptHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -69,7 +69,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add an IN instruction hook
+    ///     Add an IN instruction hook
     /// </summary>
     public HookBuilder OnIn(Unicorn.InHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -80,7 +80,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add an OUT instruction hook
+    ///     Add an OUT instruction hook
     /// </summary>
     public HookBuilder OnOut(Unicorn.OutHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -91,7 +91,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add a syscall/sysenter hook
+    ///     Add a syscall/sysenter hook
     /// </summary>
     public HookBuilder OnSyscall(Unicorn.SyscallHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -102,7 +102,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add an invalid instruction hook
+    ///     Add an invalid instruction hook
     /// </summary>
     public HookBuilder OnInvalidInstruction(Unicorn.InvalidInstructionHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -113,7 +113,7 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Add an event memory hook that listens to multiple event types described by a HookType mask
+    ///     Add an event memory hook that listens to multiple event types described by a HookType mask
     /// </summary>
     public HookBuilder OnEventMem(Unicorn.HookType eventTypes, Unicorn.MemoryEventHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
@@ -124,7 +124,10 @@ public sealed class HookBuilder
     }
 
     /// <summary>
-    /// Returns all registered hook handles as an immutable copy
+    ///     Returns all registered hook handles as an immutable copy
     /// </summary>
-    public IReadOnlyList<Unicorn.HookHandle> GetHandles() => _handles.ToArray();
+    public IReadOnlyList<Unicorn.HookHandle> GetHandles()
+    {
+        return _handles.ToArray();
+    }
 }

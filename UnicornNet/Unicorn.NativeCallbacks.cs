@@ -83,11 +83,21 @@ public partial class Unicorn
         registration = null;
         if (userData == IntPtr.Zero)
         {
+            // Can't log here - we don't have a registration to get the logger from
             return false;
         }
 
         var gcHandle = GCHandle.FromIntPtr(userData);
         registration = gcHandle.Target as HookRegistration;
-        return registration is not null;
+
+        if (registration is null)
+        {
+            // GCHandle was valid but target was not a HookRegistration or was collected
+            // This is a serious issue that indicates a bug or corrupted state
+            // Unfortunately we can't log here as we don't have access to the logger
+            return false;
+        }
+
+        return true;
     }
 }
