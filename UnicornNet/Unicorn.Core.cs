@@ -259,6 +259,15 @@ public partial class Unicorn : IDisposable
         ControlWrite(ControlType.TranslationBlockRemove, (nint)address, (nint)end);
     }
 
+    /// <summary>
+    /// Flushes the entire translation block cache.
+    /// This invalidates all cached translation blocks and forces recompilation on next execution.
+    /// </summary>
+    public void FlushCache()
+    {
+        ControlWrite(ControlType.TranslationBlockFlush);
+    }
+
     public ErrorCode GetLastError()
     {
         EnsureNotDisposed();

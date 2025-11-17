@@ -361,4 +361,37 @@ public sealed class HookTests
         Assert.Equal(expectedCommand.Value, actualCommand);
         Assert.Empty(actualArguments);
     }
+
+    [Fact]
+    public void RemoveCache_InvokesTranslationBlockRemoveControl()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        const ulong startAddress = 0x1000;
+        const ulong endAddress = 0x2000;
+
+        unicorn.RemoveCache(startAddress, endAddress);
+
+        var expectedCommand = Unicorn.ControlCommand.Write(Unicorn.ControlType.TranslationBlockRemove, 2);
+        Assert.True(native.LastControl.HasValue);
+        var (actualCommand, actualArguments) = native.LastControl.Value;
+        Assert.Equal(expectedCommand.Value, actualCommand);
+        Assert.Equal(new[] { (nint)startAddress, (nint)endAddress }, actualArguments);
+    }
+
+    [Fact]
+    public void FlushCache_InvokesTranslationBlockFlushControl()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        unicorn.FlushCache();
+
+        var expectedCommand = Unicorn.ControlCommand.Write(Unicorn.ControlType.TranslationBlockFlush, 0);
+        Assert.True(native.LastControl.HasValue);
+        var (actualCommand, actualArguments) = native.LastControl.Value;
+        Assert.Equal(expectedCommand.Value, actualCommand);
+        Assert.Empty(actualArguments);
+    }
 }
