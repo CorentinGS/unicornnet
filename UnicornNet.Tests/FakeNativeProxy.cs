@@ -138,6 +138,11 @@ internal class FakeNativeProxy : IUnicornNativeProxy
         return RegisterHook(out hookId);
     }
 
+    public virtual int HookAddInvalidInstruction(IntPtr engine, Unicorn.HookType hookType, NativeInvalidInstructionHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+    {
+        return RegisterHook(out hookId);
+    }
+
     public virtual int HookDel(IntPtr engine, nuint hookId)
     {
         ActiveHooks.Remove(hookId);

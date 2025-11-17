@@ -394,4 +394,50 @@ public sealed class HookTests
         Assert.Equal(expectedCommand.Value, actualCommand);
         Assert.Empty(actualArguments);
     }
+
+    [Fact]
+    public void InvalidInstructionHook_ReturnsTrue_ContinuesExecution()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        var invoked = false;
+        object? observedState = null;
+        const string expectedState = "invalid_insn";
+
+        var handle = unicorn.AddInvalidInstructionHook((engine, state) =>
+        {
+            invoked = true;
+            observedState = state;
+            return true; // Continue execution
+        }, state: expectedState);
+
+        var simulationSucceeded = unicorn.TrySimulateInvalidInstructionHook(handle, out var continueExecution);
+
+        Assert.True(simulationSucceeded);
+        Assert.True(invoked);
+        Assert.Equal(expectedState, observedState);
+        Assert.True(continueExecution);
+    }
+
+    [Fact]
+    public void InvalidInstructionHook_ReturnsFalse_StopsExecution()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        var invoked = false;
+
+        var handle = unicorn.AddInvalidInstructionHook((engine, state) =>
+        {
+            invoked = true;
+            return false; // Stop execution
+        });
+
+        var simulationSucceeded = unicorn.TrySimulateInvalidInstructionHook(handle, out var continueExecution);
+
+        Assert.True(simulationSucceeded);
+        Assert.True(invoked);
+        Assert.False(continueExecution);
+    }
 }
