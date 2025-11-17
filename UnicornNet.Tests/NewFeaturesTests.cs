@@ -157,13 +157,13 @@ public sealed class NewFeaturesTests
         var native = new FakeNativeProxy();
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        const int registerId = 3;
+        var register = Unicorn.Registers.X86.RAX;
         const ulong testValue = 0x1122334455667788UL;
         
-        unicorn.RegWrite(registerId, testValue);
+        unicorn.RegWrite(register, testValue);
 
         Assert.True(native.LastRegisterWrite.HasValue);
-        Assert.Equal(registerId, native.LastRegisterWrite.Value.RegisterId);
+        Assert.Equal((int)register, native.LastRegisterWrite.Value.RegisterId);
         Assert.Equal(BitConverter.GetBytes(testValue), native.LastRegisterWrite.Value.Value);
     }
 
@@ -187,13 +187,13 @@ public sealed class NewFeaturesTests
     public void RegRead_GenericReturnsTypedValue()
     {
         var native = new FakeNativeProxy();
-        const int registerId = 7;
+        var register = Unicorn.Registers.X86.RBX;
         const long expectedValue = 0x0102030405060708;
-        native.RegisterValues[registerId] = BitConverter.GetBytes(expectedValue);
+        native.RegisterValues[(int)register] = BitConverter.GetBytes(expectedValue);
         
         using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
 
-        var actualValue = unicorn.RegRead<long>(registerId);
+        var actualValue = unicorn.RegRead<Unicorn.Registers.X86, long>(register);
 
         Assert.Equal(expectedValue, actualValue);
     }
