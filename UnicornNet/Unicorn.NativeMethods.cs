@@ -30,6 +30,12 @@ public partial class Unicorn
         [LibraryImport("unicorn", EntryPoint = "uc_reg_read")]
         public static partial int UcRegRead(IntPtr engine, int registerId, ref byte buffer);
 
+        [LibraryImport("unicorn", EntryPoint = "uc_emu_start")]
+        public static partial int UcEmuStart(IntPtr engine, ulong begin, ulong until, ulong timeout, nuint count);
+
+        [LibraryImport("unicorn", EntryPoint = "uc_emu_stop")]
+        public static partial int UcEmuStop(IntPtr engine);
+
         [LibraryImport("unicorn", EntryPoint = "uc_open")]
         public static partial int UcOpen(int arch, int mode, out IntPtr engine);
 

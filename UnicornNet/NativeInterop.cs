@@ -28,6 +28,8 @@ internal interface IUnicornNativeProxy
     int MemRead(IntPtr engine, ulong address, Span<byte> buffer);
     int RegWrite(IntPtr engine, int registerId, ReadOnlySpan<byte> value);
     int RegRead(IntPtr engine, int registerId, Span<byte> buffer);
+    int EmuStart(IntPtr engine, ulong begin, ulong until, ulong timeout, nuint instructionCount);
+    int EmuStop(IntPtr engine);
     int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
     int HookAddMem(IntPtr engine, Unicorn.HookType hookType, NativeMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
     int HookAddEventMem(IntPtr engine, Unicorn.HookType hookType, NativeEventMemHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
@@ -95,6 +97,16 @@ internal sealed class NativeUnicornProxy : IUnicornNativeProxy
     public int RegRead(IntPtr engine, int registerId, Span<byte> buffer)
     {
         return buffer.IsEmpty ? 0 : Unicorn.NativeMethods.UcRegRead(engine, registerId, ref MemoryMarshal.GetReference(buffer));
+    }
+
+    public int EmuStart(IntPtr engine, ulong begin, ulong until, ulong timeout, nuint instructionCount)
+    {
+        return Unicorn.NativeMethods.UcEmuStart(engine, begin, until, timeout, instructionCount);
+    }
+
+    public int EmuStop(IntPtr engine)
+    {
+        return Unicorn.NativeMethods.UcEmuStop(engine);
     }
 
     public int HookAdd(IntPtr engine, Unicorn.HookType hookType, NativeHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)

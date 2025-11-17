@@ -24,6 +24,10 @@ internal class FakeNativeProxy : IUnicornNativeProxy
 
     public Dictionary<int, byte[]> RegisterValues { get; } = new();
 
+    public (ulong Begin, ulong Until, ulong Timeout, nuint Count)? LastEmuStart { get; private set; }
+
+    public bool EmulationStopped { get; private set; }
+
     public virtual int Open(int architecture, int mode, out IntPtr engine)
     {
         engine = new IntPtr(0x1234);
@@ -138,6 +142,18 @@ internal class FakeNativeProxy : IUnicornNativeProxy
     {
         ActiveHooks.Remove(hookId);
         RemovedHooks.Add(hookId);
+        return 0;
+    }
+
+    public virtual int EmuStart(IntPtr engine, ulong begin, ulong until, ulong timeout, nuint instructionCount)
+    {
+        LastEmuStart = (begin, until, timeout, instructionCount);
+        return 0;
+    }
+
+    public virtual int EmuStop(IntPtr engine)
+    {
+        EmulationStopped = true;
         return 0;
     }
 

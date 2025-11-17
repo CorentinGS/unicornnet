@@ -236,6 +236,34 @@ public sealed class NewFeaturesTests
             unicorn.MemMapPtr(address, size, Unicorn.MemoryPermissions.Read, pointer));
     }
 
+    [Fact]
+    public void EmuStart_ForwardsArgumentsToNativeProxy()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        const ulong begin = 0x1000;
+        const ulong end = 0x2000;
+        const ulong timeout = 10;
+        const ulong count = 5;
+
+        unicorn.EmuStart(begin, end, timeout, count);
+
+        Assert.True(native.LastEmuStart.HasValue);
+        Assert.Equal((begin, end, timeout, (nuint)count), native.LastEmuStart.Value);
+    }
+
+    [Fact]
+    public void EmuStop_SetsFlagOnNativeProxy()
+    {
+        var native = new FakeNativeProxy();
+        using var unicorn = new Unicorn(Unicorn.Architecture.X86, Unicorn.Mode.Mode32, native);
+
+        unicorn.EmuStop();
+
+        Assert.True(native.EmulationStopped);
+    }
+
     private sealed class FailingRegWriteProxy : FakeNativeProxy
     {
         public override int RegWrite(IntPtr engine, int registerId, ReadOnlySpan<byte> value)
