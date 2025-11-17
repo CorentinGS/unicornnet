@@ -63,6 +63,9 @@ public partial class Unicorn
         [LibraryImport("unicorn", EntryPoint = "uc_hook_add")]
         public static partial int UcHookAddInstructionSyscall(IntPtr engine, out nuint hook, uint hookType, NativeSyscallHookCallback callback, IntPtr userData, ulong begin, ulong end, int instruction);
 
+        [LibraryImport("unicorn", EntryPoint = "uc_hook_add")]
+        public static partial int UcHookAddInvalidInstruction(IntPtr engine, out nuint hook, uint hookType, NativeInvalidInstructionHookCallback callback, IntPtr userData, ulong begin, ulong end);
+
         [LibraryImport("unicorn", EntryPoint = "uc_hook_del")]
         public static partial int UcHookDel(IntPtr engine, nuint hook);
 

@@ -108,6 +108,18 @@ public partial class Unicorn
         return true;
     }
 
+    internal bool TrySimulateInvalidInstructionHook(HookHandle handle, out bool continueExecution)
+    {
+        continueExecution = false;
+        if (!TryGetRegistration(handle, out var registration) || registration.Category != HookCategory.InvalidInstruction)
+        {
+            return false;
+        }
+
+        continueExecution = registration.InvokeInvalidInstruction();
+        return true;
+    }
+
     private HookHandle RegisterHook(HookType type, Delegate callback, object? state, HookRange? range)
     {
         var normalizedRange = NormalizeRange(range);
@@ -210,6 +222,20 @@ public partial class Unicorn
             (engine, hookRange) =>
             {
                 var err = _native.HookAddInstructionSyscall(engine, HookType.Instruction, SyscallHookThunk, registration.UserDataPointer, hookRange.Begin, hookRange.End, X86InstructionSyscall, out var hookId);
+                return (err, hookId);
+            });
+    }
+
+    private HookHandle RegisterInvalidInstructionHook(InvalidInstructionHook callback, HookRange? range, object? state)
+    {
+        var normalizedRange = NormalizeRange(range);
+        var registration = new HookRegistration(this, HookType.InvalidInstruction, HookCategory.InvalidInstruction, callback, state);
+        return RegisterHookInternal(
+            registration,
+            normalizedRange,
+            (engine, hookRange) =>
+            {
+                var err = _native.HookAddInvalidInstruction(engine, HookType.InvalidInstruction, InvalidInstructionHookThunk, registration.UserDataPointer, hookRange.Begin, hookRange.End, out var hookId);
                 return (err, hookId);
             });
     }

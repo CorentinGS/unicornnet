@@ -13,7 +13,8 @@ public partial class Unicorn
         Interrupt,
         In,
         Out,
-        Syscall
+        Syscall,
+        InvalidInstruction
     }
 
     /// <summary>
@@ -162,6 +163,16 @@ public partial class Unicorn
             }
 
             syscallHook(_owner, _state);
+        }
+
+        public bool InvokeInvalidInstruction()
+        {
+            if (_disposed || _callback is not InvalidInstructionHook invalidInsnHook)
+            {
+                return false;
+            }
+
+            return invalidInsnHook(_owner, _state);
         }
     }
 }

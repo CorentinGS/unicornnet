@@ -16,6 +16,8 @@ public delegate void NativeInstructionOutHookCallback(IntPtr engine, uint port, 
 
 public delegate void NativeSyscallHookCallback(IntPtr engine, IntPtr userData);
 
+public delegate bool NativeInvalidInstructionHookCallback(IntPtr engine, IntPtr userData);
+
 internal interface IUnicornNativeProxy
 {
     int Open(int architecture, int mode, out IntPtr engine);
@@ -37,6 +39,7 @@ internal interface IUnicornNativeProxy
     int HookAddInstructionIn(IntPtr engine, Unicorn.HookType hookType, NativeInstructionInHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId);
     int HookAddInstructionOut(IntPtr engine, Unicorn.HookType hookType, NativeInstructionOutHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId);
     int HookAddInstructionSyscall(IntPtr engine, Unicorn.HookType hookType, NativeSyscallHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId);
+    int HookAddInvalidInstruction(IntPtr engine, Unicorn.HookType hookType, NativeInvalidInstructionHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId);
     int HookDel(IntPtr engine, nuint hookId);
     int Control(IntPtr engine, uint control, ReadOnlySpan<nint> arguments);
     int Errno(IntPtr engine);
@@ -142,6 +145,11 @@ internal sealed class NativeUnicornProxy : IUnicornNativeProxy
     public int HookAddInstructionSyscall(IntPtr engine, Unicorn.HookType hookType, NativeSyscallHookCallback callback, IntPtr userData, ulong begin, ulong end, int instructionId, out nuint hookId)
     {
         return Unicorn.NativeMethods.UcHookAddInstructionSyscall(engine, out hookId, (uint)hookType, callback, userData, begin, end, instructionId);
+    }
+
+    public int HookAddInvalidInstruction(IntPtr engine, Unicorn.HookType hookType, NativeInvalidInstructionHookCallback callback, IntPtr userData, ulong begin, ulong end, out nuint hookId)
+    {
+        return Unicorn.NativeMethods.UcHookAddInvalidInstruction(engine, out hookId, (uint)hookType, callback, userData, begin, end);
     }
 
     public int HookDel(IntPtr engine, nuint hookId)

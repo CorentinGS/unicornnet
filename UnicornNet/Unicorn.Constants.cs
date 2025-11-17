@@ -21,6 +21,8 @@ public partial class Unicorn
 
     public delegate void SyscallHook(Unicorn engine, object? state);
 
+    public delegate bool InvalidInstructionHook(Unicorn engine, object? state);
+
     // Generic delegates to avoid boxing value type states
     public delegate void BlockHook<in TState>(Unicorn engine, ulong address, int size, TState state);
 
@@ -37,6 +39,8 @@ public partial class Unicorn
     public delegate void OutHook<in TState>(Unicorn engine, uint port, int size, uint value, TState state);
 
     public delegate void SyscallHook<in TState>(Unicorn engine, TState state);
+
+    public delegate bool InvalidInstructionHook<in TState>(Unicorn engine, TState state);
 
     public enum Architecture : uint
     {

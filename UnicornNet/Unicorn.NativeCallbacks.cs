@@ -11,6 +11,7 @@ public partial class Unicorn
     private static readonly NativeInstructionInHookCallback InstructionInHookThunk = OnNativeInstructionInHook;
     private static readonly NativeInstructionOutHookCallback InstructionOutHookThunk = OnNativeInstructionOutHook;
     private static readonly NativeSyscallHookCallback SyscallHookThunk = OnNativeSyscallHook;
+    private static readonly NativeInvalidInstructionHookCallback InvalidInstructionHookThunk = OnNativeInvalidInstructionHook;
 
     private static void OnNativeHook(IntPtr engine, ulong address, uint size, IntPtr userData)
     {
@@ -70,6 +71,11 @@ public partial class Unicorn
         }
 
         registration!.InvokeSyscall();
+    }
+
+    private static bool OnNativeInvalidInstructionHook(IntPtr engine, IntPtr userData)
+    {
+        return TryResolveRegistration(userData, out var registration) && registration!.InvokeInvalidInstruction();
     }
 
     private static bool TryResolveRegistration(IntPtr userData, out HookRegistration? registration)

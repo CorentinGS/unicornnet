@@ -140,6 +140,22 @@ public partial class Unicorn
         return RegisterSyscallHook(wrapper, range, state);
     }
 
+    public HookHandle AddInvalidInstructionHook(InvalidInstructionHook callback, HookRange? range = null, object? state = null)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        return RegisterInvalidInstructionHook(callback, range, state);
+    }
+
+    /// <summary>
+    /// Adds an invalid instruction hook with a strongly-typed state parameter to avoid boxing
+    /// </summary>
+    public HookHandle AddInvalidInstructionHook<TState>(InvalidInstructionHook<TState> callback, HookRange? range = null, TState? state = default)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        InvalidInstructionHook wrapper = (engine, boxedState) => callback(engine, (TState)boxedState!);
+        return RegisterInvalidInstructionHook(wrapper, range, state);
+    }
+
     /// <summary>
     /// Adds an event memory hook that can monitor multiple event types using a hook-type bitmask
     /// </summary>
