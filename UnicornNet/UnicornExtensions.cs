@@ -93,6 +93,14 @@ public static class UnicornExtensions
             return region;
         }
         /// <summary>
+        ///     Write a single byte to memory at the specified address
+        /// </summary>
+        public void WriteBytes(ulong address, byte value)
+        {
+            engine.MemWrite(address, new ReadOnlySpan<byte>(in value));
+        }
+
+        /// <summary>
         ///     Write bytes to memory at the specified address
         /// </summary>
         public void WriteBytes(ulong address, params byte[] bytes)

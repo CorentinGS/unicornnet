@@ -5,11 +5,11 @@ namespace UnicornNet;
 
 public partial class Unicorn
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int NormalizeRegisterId<TRegister>(TRegister register)
         where TRegister : struct, Enum
     {
-        var value = Convert.ToInt64(register);
-        return checked((int)value);
+        return Unsafe.As<TRegister, int>(ref register);
     }
 
     public void RegWrite(int registerId, ReadOnlySpan<byte> value)
