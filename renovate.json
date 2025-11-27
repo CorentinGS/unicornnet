@@ -1,6 +1,20 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ]
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"labels": ["dependencies"],
+	"dependencyDashboard": true,
+	"extends": [
+		"config:best-practices",
+		":disableRateLimiting",
+		"group:recommended",
+		"group:linters",
+		"schedule:nonOfficeHours",
+		"group:monorepos",
+		"group:allNonMajor"
+	],
+	"packageRules": [
+		{
+			"matchUpdateTypes": ["minor", "patch", "pin", "digest", "rollback"],
+			"automerge": true
+		}
+	]
 }
