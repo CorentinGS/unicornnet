@@ -1,3 +1,5 @@
+using System;
+
 namespace UnicornNet;
 
 public partial class Unicorn : IDisposable
