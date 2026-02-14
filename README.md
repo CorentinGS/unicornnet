@@ -24,7 +24,7 @@ dotnet add package UnicornNet
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/UnicornNet.git
+   git clone https://github.com/corentings/UnicornNet.git
    cd UnicornNet
    ```
 
