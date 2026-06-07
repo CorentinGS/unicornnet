@@ -7,6 +7,7 @@ public partial class Unicorn : IDisposable
     private readonly SafeEngineHandle _engineHandle;
     private readonly MemoryManager _memory;
     private readonly IUnicornNativeProxy _native;
+    private readonly RegisterBank _registers;
     private bool _disposed;
 
     public Unicorn(Architecture architecture, Mode mode)
@@ -42,6 +43,7 @@ public partial class Unicorn : IDisposable
 
         _engineHandle = new SafeEngineHandle(handle, _native);
         _memory = new MemoryManager(_native, () => EngineHandle, EnsureNotDisposed);
+        _registers = new RegisterBank(_native, () => EngineHandle, EnsureNotDisposed);
     }
 
     /// <summary>
