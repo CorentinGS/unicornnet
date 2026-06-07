@@ -5,6 +5,7 @@ namespace UnicornNet;
 public partial class Unicorn : IDisposable
 {
     private readonly SafeEngineHandle _engineHandle;
+    private readonly MemoryManager _memory;
     private readonly IUnicornNativeProxy _native;
     private bool _disposed;
 
@@ -40,6 +41,7 @@ public partial class Unicorn : IDisposable
         }
 
         _engineHandle = new SafeEngineHandle(handle, _native);
+        _memory = new MemoryManager(_native, () => EngineHandle, EnsureNotDisposed);
     }
 
     /// <summary>
