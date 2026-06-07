@@ -6,6 +6,7 @@ public partial class Unicorn : IDisposable
 {
     private readonly ControlEngine _control;
     private readonly SafeEngineHandle _engineHandle;
+    private readonly HookManager _hooks;
     private readonly MemoryManager _memory;
     private readonly IUnicornNativeProxy _native;
     private readonly RegisterBank _registers;
@@ -44,6 +45,7 @@ public partial class Unicorn : IDisposable
 
         _engineHandle = new SafeEngineHandle(handle, _native);
         _control = new ControlEngine(_native, () => EngineHandle, EnsureNotDisposed);
+        _hooks = new HookManager(this, _native, () => EngineHandle, EnsureNotDisposed);
         _memory = new MemoryManager(_native, () => EngineHandle, EnsureNotDisposed);
         _registers = new RegisterBank(_native, () => EngineHandle, EnsureNotDisposed);
     }
@@ -83,7 +85,7 @@ public partial class Unicorn : IDisposable
             return;
         }
 
-        ClearHooks();
+        _hooks?.Dispose();
         _engineHandle?.Dispose();
         _disposed = true;
         GC.SuppressFinalize(this);
@@ -153,28 +155,7 @@ public partial class Unicorn : IDisposable
     {
         EnsureNotDisposed();
 
-        var totalCount = _hookRegistry.Count;
-        var disposedCount = 0;
-
-        foreach (var registration in _hookRegistry.Values)
-        {
-            // Check if the registration is disposed by trying to access its handle
-            // We can't directly check _disposed as it's private, so we check if handle is empty
-            // and if the GCHandle is still allocated
-            try
-            {
-                if (registration.Handle.IsEmpty)
-                {
-                    disposedCount++;
-                }
-            }
-            catch
-            {
-                disposedCount++;
-            }
-        }
-
-        var isHealthy = disposedCount == 0;
+        var (isHealthy, disposedCount, totalCount) = _hooks.Validate();
 
         if (!isHealthy && Logger != null)
         {

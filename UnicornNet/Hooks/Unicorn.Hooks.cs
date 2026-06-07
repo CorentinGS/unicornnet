@@ -10,13 +10,13 @@ public partial class Unicorn
     public HookBuilder Hooks()
     {
         EnsureNotDisposed();
-        return new HookBuilder(this);
+        return new HookBuilder(_hooks);
     }
 
     public HookHandle AddCodeHook(CodeHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterHook(HookType.Code, callback, state, range);
+        return _hooks.AddHook(HookType.Code, callback, range, state);
     }
 
     /// <summary>
@@ -27,13 +27,13 @@ public partial class Unicorn
         ArgumentNullException.ThrowIfNull(callback);
         // Wrap the generic callback to bridge to the non-generic internal implementation
         CodeHook wrapper = (engine, address, size, boxedState) => callback(engine, address, size, (TState)boxedState!);
-        return RegisterHook(HookType.Code, wrapper, state, range);
+        return _hooks.AddHook(HookType.Code, wrapper, range, state);
     }
 
     public HookHandle AddBlockHook(BlockHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterHook(HookType.Block, callback, state, range);
+        return _hooks.AddHook(HookType.Block, callback, range, state);
     }
 
     /// <summary>
@@ -43,13 +43,13 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         BlockHook wrapper = (engine, address, size, boxedState) => callback(engine, address, size, (TState)boxedState!);
-        return RegisterHook(HookType.Block, wrapper, state, range);
+        return _hooks.AddHook(HookType.Block, wrapper, range, state);
     }
 
     public HookHandle AddMemReadHook(MemoryHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterMemoryHook(HookType.MemRead, MemoryAccessType.Read, callback, range, state);
+        return _hooks.AddHook(HookType.MemRead, callback, range, state);
     }
 
     /// <summary>
@@ -59,13 +59,13 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         MemoryHook wrapper = (engine, accessType, address, size, value, boxedState) => callback(engine, accessType, address, size, value, (TState)boxedState!);
-        return RegisterMemoryHook(HookType.MemRead, MemoryAccessType.Read, wrapper, range, state);
+        return _hooks.AddHook(HookType.MemRead, wrapper, range, state);
     }
 
     public HookHandle AddMemWriteHook(MemoryHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterMemoryHook(HookType.MemWrite, MemoryAccessType.Write, callback, range, state);
+        return _hooks.AddHook(HookType.MemWrite, callback, range, state);
     }
 
     /// <summary>
@@ -75,13 +75,13 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         MemoryHook wrapper = (engine, accessType, address, size, value, boxedState) => callback(engine, accessType, address, size, value, (TState)boxedState!);
-        return RegisterMemoryHook(HookType.MemWrite, MemoryAccessType.Write, wrapper, range, state);
+        return _hooks.AddHook(HookType.MemWrite, wrapper, range, state);
     }
 
     public HookHandle AddInterruptHook(InterruptHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterInterruptHook(callback, range, state);
+        return _hooks.AddHook(HookType.Interrupt, callback, range, state);
     }
 
     /// <summary>
@@ -91,13 +91,13 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         InterruptHook wrapper = (engine, interruptNumber, boxedState) => callback(engine, interruptNumber, (TState)boxedState!);
-        return RegisterInterruptHook(wrapper, range, state);
+        return _hooks.AddHook(HookType.Interrupt, wrapper, range, state);
     }
 
     public HookHandle AddInHook(InHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterInHook(callback, range, state);
+        return _hooks.AddHook(HookType.Instruction, callback, range, state);
     }
 
     /// <summary>
@@ -107,13 +107,13 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         InHook wrapper = (engine, port, size, boxedState) => callback(engine, port, size, (TState)boxedState!);
-        return RegisterInHook(wrapper, range, state);
+        return _hooks.AddHook(HookType.Instruction, wrapper, range, state);
     }
 
     public HookHandle AddOutHook(OutHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterOutHook(callback, range, state);
+        return _hooks.AddHook(HookType.Instruction, callback, range, state);
     }
 
     /// <summary>
@@ -123,13 +123,13 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         OutHook wrapper = (engine, port, size, value, boxedState) => callback(engine, port, size, value, (TState)boxedState!);
-        return RegisterOutHook(wrapper, range, state);
+        return _hooks.AddHook(HookType.Instruction, wrapper, range, state);
     }
 
     public HookHandle AddSyscallHook(SyscallHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterSyscallHook(callback, range, state);
+        return _hooks.AddHook(HookType.Instruction, callback, range, state);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         SyscallHook wrapper = (engine, boxedState) => callback(engine, (TState)boxedState!);
-        return RegisterSyscallHook(wrapper, range, state);
+        return _hooks.AddHook(HookType.Instruction, wrapper, range, state);
     }
 
     /// <summary>
@@ -202,7 +202,7 @@ public partial class Unicorn
     public HookHandle AddInvalidInstructionHook(InvalidInstructionHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterInvalidInstructionHook(callback, range, state);
+        return _hooks.AddHook(HookType.InvalidInstruction, callback, range, state);
     }
 
     /// <summary>
@@ -225,7 +225,7 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         InvalidInstructionHook wrapper = (engine, boxedState) => callback(engine, (TState)boxedState!);
-        return RegisterInvalidInstructionHook(wrapper, range, state);
+        return _hooks.AddHook(HookType.InvalidInstruction, wrapper, range, state);
     }
 
     /// <summary>
@@ -234,7 +234,7 @@ public partial class Unicorn
     public HookHandle AddEventMemHook(HookType eventTypes, MemoryEventHook callback, HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        return RegisterEventMemHook(eventTypes, callback, range, state);
+        return _hooks.AddHook(eventTypes, callback, range, state);
     }
 
     /// <summary>
@@ -244,13 +244,13 @@ public partial class Unicorn
     {
         ArgumentNullException.ThrowIfNull(callback);
         MemoryEventHook wrapper = (engine, accessType2, address, size, value, boxedState) => callback(engine, accessType2, address, size, value, (TState)boxedState!);
-        return RegisterEventMemHook(eventTypes, wrapper, range, state);
+        return _hooks.AddHook(eventTypes, wrapper, range, state);
     }
 
     public void RemoveHook(HookHandle handle)
     {
         EnsureNotDisposed();
-        RemoveHookInternal(handle, false);
+        _hooks.RemoveHook(handle);
     }
 
     public void HookDel(HookHandle handle)
