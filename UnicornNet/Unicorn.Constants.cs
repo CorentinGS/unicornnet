@@ -8,7 +8,7 @@ public partial class Unicorn
     // Non-generic delegates for backward compatibility
     public delegate void BlockHook(Unicorn engine, ulong address, int size, object? state);
 
-    // Generic delegates to avoid boxing value type states
+    // Generic delegate types are retained for source compatibility; hook registration stores state as object?.
     public delegate void BlockHook<in TState>(Unicorn engine, ulong address, int size, TState state);
 
     public delegate void CodeHook(Unicorn engine, ulong address, int size, object? state);

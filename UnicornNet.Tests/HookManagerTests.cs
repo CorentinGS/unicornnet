@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using Xunit;
 
 namespace UnicornNet.Tests;
@@ -20,5 +22,18 @@ public sealed class HookManagerTests
         Assert.False(invokedAfterRemoval);
         Assert.Equal(1, invocationCount);
         Assert.Contains(handle, manager.RemovedHooks);
+    }
+
+    [Fact]
+    public void PublicHookRegistrationMethods_AreNotGeneric()
+    {
+        var genericHookMethods = typeof(Unicorn).GetMethods()
+            .Where(method => method.Name.StartsWith("Add", StringComparison.Ordinal)
+                             && method.Name.EndsWith("Hook", StringComparison.Ordinal)
+                             && method.IsGenericMethod)
+            .Select(method => method.Name)
+            .ToArray();
+
+        Assert.Empty(genericHookMethods);
     }
 }
