@@ -256,13 +256,33 @@ public partial class Unicorn
     /// </summary>
     private const int X86InstructionSyscall = 699;
 
-    public readonly record struct ControlCommand(uint Value)
+    public readonly record struct ControlCommand
     {
         private const int ArgumentCountShift = 26;
         private const int IoShift = 30;
         private const uint TypeMask = (1u << ArgumentCountShift) - 1;
         private const uint ArgumentMask = 0xFu;
         private const uint IoMask = 0x3u;
+        private readonly nint[]? _arguments;
+
+        public ControlCommand(uint value)
+        {
+            Value = value;
+            _arguments = null;
+        }
+
+        private ControlCommand(uint value, nint[] arguments)
+        {
+            Value = value;
+            _arguments = arguments;
+        }
+
+        public uint Value { get; }
+
+        public ReadOnlySpan<nint> Arguments
+        {
+            get => _arguments;
+        }
 
         public ControlType Type
         {
@@ -292,9 +312,29 @@ public partial class Unicorn
             return new ControlCommand(value);
         }
 
+        public static ControlCommand Create(ControlType type, ReadOnlySpan<nint> arguments, ControlIo access)
+        {
+            return Create(type, arguments.Length, access).WithArguments(arguments);
+        }
+
+        public ControlCommand WithArguments(ReadOnlySpan<nint> arguments)
+        {
+            if (arguments.Length != ArgumentCount)
+            {
+                throw new ArgumentException("Argument length must match the command argument count.", nameof(arguments));
+            }
+
+            return new ControlCommand(Value, arguments.ToArray());
+        }
+
         public static ControlCommand None(ControlType type, int argumentCount)
         {
             return Create(type, argumentCount, ControlIo.None);
+        }
+
+        public static ControlCommand None(ControlType type, ReadOnlySpan<nint> arguments)
+        {
+            return Create(type, arguments, ControlIo.None);
         }
 
         public static ControlCommand Read(ControlType type, int argumentCount)
@@ -302,14 +342,29 @@ public partial class Unicorn
             return Create(type, argumentCount, ControlIo.Read);
         }
 
+        public static ControlCommand Read(ControlType type, ReadOnlySpan<nint> arguments)
+        {
+            return Create(type, arguments, ControlIo.Read);
+        }
+
         public static ControlCommand Write(ControlType type, int argumentCount)
         {
             return Create(type, argumentCount, ControlIo.Write);
         }
 
+        public static ControlCommand Write(ControlType type, ReadOnlySpan<nint> arguments)
+        {
+            return Create(type, arguments, ControlIo.Write);
+        }
+
         public static ControlCommand ReadWrite(ControlType type, int argumentCount)
         {
             return Create(type, argumentCount, ControlIo.ReadWrite);
+        }
+
+        public static ControlCommand ReadWrite(ControlType type, ReadOnlySpan<nint> arguments)
+        {
+            return Create(type, arguments, ControlIo.ReadWrite);
         }
 
         public static implicit operator ControlCommand(uint value)
