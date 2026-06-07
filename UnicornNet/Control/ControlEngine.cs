@@ -22,10 +22,17 @@ internal sealed class ControlEngine : IControlEngine
     public void Control(Unicorn.ControlCommand command)
     {
         _ensureNotDisposed();
+
+        if (command.Arguments.Length != command.ArgumentCount)
+        {
+            throw new ArgumentException("Command arguments length must match the command argument count.", nameof(command));
+        }
+
         var err = _native.Control(_getEngineHandle(), command.Value, command.Arguments);
         if (err != 0)
         {
             throw new UnicornEngineException((Unicorn.ErrorCode)err, "uc_ctl");
         }
+    }
     }
 }
