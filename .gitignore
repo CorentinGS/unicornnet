@@ -204,3 +204,8 @@ _ReSharper.Caches/
 # unicorn.dll
 # libunicorn.so
 # libunicorn.dylib
+
+# Agent skills local tracker
+CLAUDE.md
+docs/agents/
+.scratch/

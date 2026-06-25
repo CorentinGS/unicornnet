@@ -7,7 +7,7 @@ namespace UnicornNet;
 /// </summary>
 public readonly struct MemoryRegion : IDisposable
 {
-    private readonly Unicorn _engine;
+    private readonly IMemoryManager _memory;
 
     /// <summary>
     ///     The base address of the memory region
@@ -26,9 +26,11 @@ public readonly struct MemoryRegion : IDisposable
     /// </summary>
     public Unicorn.MemoryPermissions Permissions { get; }
 
-    internal MemoryRegion(Unicorn engine, ulong address, ulong size, Unicorn.MemoryPermissions permissions)
+    internal MemoryRegion(IMemoryManager memory, ulong address, ulong size, Unicorn.MemoryPermissions permissions)
     {
-        _engine = engine;
+        ArgumentNullException.ThrowIfNull(memory);
+
+        _memory = memory;
         Address = address;
         Size = size;
         Permissions = permissions;
@@ -44,7 +46,7 @@ public readonly struct MemoryRegion : IDisposable
             throw new ArgumentOutOfRangeException(nameof(data), "Data exceeds region bounds");
         }
 
-        _engine.MemWrite(Address + offset, data);
+        _memory.Write(Address + offset, data);
     }
 
     /// <summary>
@@ -57,7 +59,7 @@ public readonly struct MemoryRegion : IDisposable
             throw new ArgumentOutOfRangeException(nameof(buffer), "Buffer exceeds region bounds");
         }
 
-        _engine.MemRead(Address + offset, buffer);
+        _memory.Read(Address + offset, buffer);
     }
 
     /// <summary>
@@ -65,7 +67,7 @@ public readonly struct MemoryRegion : IDisposable
     /// </summary>
     public readonly void Protect(Unicorn.MemoryPermissions permissions)
     {
-        _engine.MemProtect(Address, Size, permissions);
+        _memory.Protect(Address, Size, permissions);
     }
 
     /// <summary>
@@ -73,7 +75,7 @@ public readonly struct MemoryRegion : IDisposable
     /// </summary>
     public readonly void Dispose()
     {
-        _engine.MemUnmap(Address, Size);
+        _memory.Unmap(Address, Size);
     }
 
     /// <summary>
