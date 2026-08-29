@@ -20,6 +20,16 @@ internal class FakeNativeProxy : IUnicornNativeProxy
 
     public List<(ulong Address, ulong Size, uint Permissions, IntPtr Pointer)> MemMapPtrRequests { get; } = [];
 
+    public (ulong Address, ulong Size, uint Permissions)? LastMemMap { get; private set; }
+
+    public (ulong Address, ulong Size)? LastMemUnmap { get; private set; }
+
+    public (ulong Address, ulong Size, uint Permissions)? LastMemProtect { get; private set; }
+
+    public (ulong Address, byte[] Data)? LastMemWrite { get; private set; }
+
+    public (ulong Address, int Length)? LastMemRead { get; private set; }
+
     public (int RegisterId, byte[] Value)? LastRegisterWrite { get; private set; }
 
     public Dictionary<int, byte[]> RegisterValues { get; } = new();
@@ -42,6 +52,7 @@ internal class FakeNativeProxy : IUnicornNativeProxy
 
     public virtual int MemMap(IntPtr engine, ulong address, ulong size, uint permissions)
     {
+        LastMemMap = (address, size, permissions);
         return 0;
     }
 
@@ -53,21 +64,25 @@ internal class FakeNativeProxy : IUnicornNativeProxy
 
     public virtual int MemUnmap(IntPtr engine, ulong address, ulong size)
     {
+        LastMemUnmap = (address, size);
         return 0;
     }
 
     public virtual int MemProtect(IntPtr engine, ulong address, ulong size, uint permissions)
     {
+        LastMemProtect = (address, size, permissions);
         return 0;
     }
 
     public virtual int MemWrite(IntPtr engine, ulong address, ReadOnlySpan<byte> data)
     {
+        LastMemWrite = (address, data.ToArray());
         return 0;
     }
 
     public virtual int MemRead(IntPtr engine, ulong address, Span<byte> buffer)
     {
+        LastMemRead = (address, buffer.Length);
         buffer.Clear();
         return 0;
     }

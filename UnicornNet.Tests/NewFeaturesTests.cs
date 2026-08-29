@@ -13,7 +13,8 @@ public sealed class NewFeaturesTests
     [Fact]
     public void MemoryRegion_TracksAddressAndSize()
     {
-        var region = new MemoryRegion(null!, BaseAddress, RegionSize, Unicorn.MemoryPermissions.All);
+        var memory = new FakeMemoryManager();
+        var region = new MemoryRegion(memory, BaseAddress, RegionSize, Unicorn.MemoryPermissions.All);
         var expectedEndAddress = BaseAddress + RegionSize;
 
         Assert.Equal(BaseAddress, region.Address);
@@ -25,7 +26,8 @@ public sealed class NewFeaturesTests
     [Fact]
     public void MemoryRegion_ContainsCheck_ReturnsCorrectResult()
     {
-        var region = new MemoryRegion(null!, BaseAddress, RegionSize, Unicorn.MemoryPermissions.All);
+        var memory = new FakeMemoryManager();
+        var region = new MemoryRegion(memory, BaseAddress, RegionSize, Unicorn.MemoryPermissions.All);
         var middleAddress = BaseAddress + 0x500;
         var lastAddress = BaseAddress + RegionSize - 1;
         var beforeStart = BaseAddress - 1;
@@ -41,7 +43,8 @@ public sealed class NewFeaturesTests
     [Fact]
     public void MemoryRegion_ContainsRange_ReturnsCorrectResult()
     {
-        var region = new MemoryRegion(null!, BaseAddress, RegionSize, Unicorn.MemoryPermissions.All);
+        var memory = new FakeMemoryManager();
+        var region = new MemoryRegion(memory, BaseAddress, RegionSize, Unicorn.MemoryPermissions.All);
         const ulong smallSize = 0x100;
         const ulong exceedsRegionByOne = RegionSize + 1;
         const ulong largeSize = 0x200;

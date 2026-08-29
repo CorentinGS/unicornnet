@@ -1,92 +1,55 @@
 using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace UnicornNet;
 
 public partial class Unicorn
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int NormalizeRegisterId<TRegister>(TRegister register)
-        where TRegister : struct, Enum
-    {
-        return Unsafe.As<TRegister, int>(ref register);
-    }
-
     public void RegWrite(int registerId, ReadOnlySpan<byte> value)
     {
-        EnsureNotDisposed();
-        if (value.IsEmpty)
-        {
-            throw new ArgumentException("Value span cannot be empty.", nameof(value));
-        }
-
-        var err = _native.RegWrite(EngineHandle, registerId, value);
-        if (err != 0)
-        {
-            throw new UnicornEngineException((ErrorCode)err, "uc_reg_write");
-        }
+        _registers.Write(registerId, value);
     }
 
     public void RegWrite<TRegister>(TRegister register, ReadOnlySpan<byte> value)
         where TRegister : struct, Enum
     {
-        RegWrite(NormalizeRegisterId(register), value);
+        _registers.Write(register, value);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RegWrite<T>(int registerId, T value)
         where T : unmanaged
     {
-        var span = MemoryMarshal.CreateReadOnlySpan(ref value, 1);
-        RegWrite(registerId, MemoryMarshal.AsBytes(span));
+        _registers.Write(registerId, value);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RegWrite<TRegister, TValue>(TRegister register, TValue value)
         where TRegister : struct, Enum
         where TValue : unmanaged
     {
-        RegWrite(NormalizeRegisterId(register), value);
+        _registers.Write(register, value);
     }
 
     public void RegRead(int registerId, Span<byte> destination)
     {
-        EnsureNotDisposed();
-        if (destination.IsEmpty)
-        {
-            throw new ArgumentException("Destination span cannot be empty.", nameof(destination));
-        }
-
-        var err = _native.RegRead(EngineHandle, registerId, destination);
-        if (err != 0)
-        {
-            throw new UnicornEngineException((ErrorCode)err, "uc_reg_read");
-        }
+        _registers.Read(registerId, destination);
     }
 
     public void RegRead<TRegister>(TRegister register, Span<byte> destination)
         where TRegister : struct, Enum
     {
-        RegRead(NormalizeRegisterId(register), destination);
+        _registers.Read(register, destination);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T RegRead<T>(int registerId)
         where T : unmanaged
     {
-        T value = default;
-        var span = MemoryMarshal.CreateSpan(ref value, 1);
-        RegRead(registerId, MemoryMarshal.AsBytes(span));
-        return value;
+        return _registers.Read<T>(registerId);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TValue RegRead<TRegister, TValue>(TRegister register)
         where TRegister : struct, Enum
         where TValue : unmanaged
     {
-        return RegRead<TValue>(NormalizeRegisterId(register));
+        return _registers.Read<TRegister, TValue>(register);
     }
 
     #region Register Enum Overloads

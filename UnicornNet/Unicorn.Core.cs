@@ -4,8 +4,12 @@ namespace UnicornNet;
 
 public partial class Unicorn : IDisposable
 {
+    private readonly ControlEngine _control;
     private readonly SafeEngineHandle _engineHandle;
+    private readonly HookManager _hooks;
+    private readonly MemoryManager _memory;
     private readonly IUnicornNativeProxy _native;
+    private readonly RegisterBank _registers;
     private bool _disposed;
 
     public Unicorn(Architecture architecture, Mode mode)
@@ -40,6 +44,10 @@ public partial class Unicorn : IDisposable
         }
 
         _engineHandle = new SafeEngineHandle(handle, _native);
+        _control = new ControlEngine(_native, () => EngineHandle, EnsureNotDisposed);
+        _hooks = new HookManager(this, _native, () => EngineHandle, EnsureNotDisposed);
+        _memory = new MemoryManager(_native, () => EngineHandle, EnsureNotDisposed);
+        _registers = new RegisterBank(_native, () => EngineHandle, EnsureNotDisposed);
     }
 
     /// <summary>
@@ -77,7 +85,7 @@ public partial class Unicorn : IDisposable
             return;
         }
 
-        ClearHooks();
+        _hooks?.Dispose();
         _engineHandle?.Dispose();
         _disposed = true;
         GC.SuppressFinalize(this);
@@ -91,201 +99,6 @@ public partial class Unicorn : IDisposable
     private void EnsureNotDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, nameof(Unicorn));
-    }
-
-    public void Control(ControlCommand command)
-    {
-        EnsureNotDisposed();
-        var err = _native.Control(EngineHandle, command.Value, ReadOnlySpan<nint>.Empty);
-        if (err != 0)
-        {
-            throw new UnicornEngineException((ErrorCode)err, "uc_ctl");
-        }
-    }
-
-    public void Control(ControlCommand command, nint arg1)
-    {
-        EnsureNotDisposed();
-        ReadOnlySpan<nint> args = [arg1];
-        var err = _native.Control(EngineHandle, command.Value, args);
-        if (err != 0)
-        {
-            throw new UnicornEngineException((ErrorCode)err, "uc_ctl");
-        }
-    }
-
-    public void Control(ControlCommand command, nint arg1, nint arg2)
-    {
-        EnsureNotDisposed();
-        ReadOnlySpan<nint> args = [arg1, arg2];
-        var err = _native.Control(EngineHandle, command.Value, args);
-        if (err != 0)
-        {
-            throw new UnicornEngineException((ErrorCode)err, "uc_ctl");
-        }
-    }
-
-    public void Control(ControlCommand command, nint arg1, nint arg2, nint arg3)
-    {
-        EnsureNotDisposed();
-        ReadOnlySpan<nint> args = [arg1, arg2, arg3];
-        var err = _native.Control(EngineHandle, command.Value, args);
-        if (err != 0)
-        {
-            throw new UnicornEngineException((ErrorCode)err, "uc_ctl");
-        }
-    }
-
-    public void Control(ControlCommand command, nint arg1, nint arg2, nint arg3, nint arg4)
-    {
-        EnsureNotDisposed();
-        ReadOnlySpan<nint> args = [arg1, arg2, arg3, arg4];
-        var err = _native.Control(EngineHandle, command.Value, args);
-        if (err != 0)
-        {
-            throw new UnicornEngineException((ErrorCode)err, "uc_ctl");
-        }
-    }
-
-    public void Control(ControlCommand command, ReadOnlySpan<nint> arguments)
-    {
-        EnsureNotDisposed();
-        var err = _native.Control(EngineHandle, command.Value, arguments);
-        if (err != 0)
-        {
-            throw new UnicornEngineException((ErrorCode)err, "uc_ctl");
-        }
-    }
-
-    public void Control(ControlType type, ControlIo access)
-    {
-        var command = ControlCommand.Create(type, 0, access);
-        Control(command);
-    }
-
-    public void Control(ControlType type, ControlIo access, nint arg1)
-    {
-        var command = ControlCommand.Create(type, 1, access);
-        Control(command, arg1);
-    }
-
-    public void Control(ControlType type, ControlIo access, nint arg1, nint arg2)
-    {
-        var command = ControlCommand.Create(type, 2, access);
-        Control(command, arg1, arg2);
-    }
-
-    public void Control(ControlType type, ControlIo access, nint arg1, nint arg2, nint arg3)
-    {
-        var command = ControlCommand.Create(type, 3, access);
-        Control(command, arg1, arg2, arg3);
-    }
-
-    public void Control(ControlType type, ControlIo access, nint arg1, nint arg2, nint arg3, nint arg4)
-    {
-        var command = ControlCommand.Create(type, 4, access);
-        Control(command, arg1, arg2, arg3, arg4);
-    }
-
-    public void Control(ControlType type, ControlIo access, ReadOnlySpan<nint> arguments)
-    {
-        var command = ControlCommand.Create(type, arguments.Length, access);
-        Control(command, arguments);
-    }
-
-    public void ControlRead(ControlType type)
-    {
-        Control(type, ControlIo.Read);
-    }
-
-    public void ControlRead(ControlType type, nint arg1)
-    {
-        Control(type, ControlIo.Read, arg1);
-    }
-
-    public void ControlRead(ControlType type, nint arg1, nint arg2)
-    {
-        Control(type, ControlIo.Read, arg1, arg2);
-    }
-
-    public void ControlRead(ControlType type, nint arg1, nint arg2, nint arg3)
-    {
-        Control(type, ControlIo.Read, arg1, arg2, arg3);
-    }
-
-    public void ControlRead(ControlType type, nint arg1, nint arg2, nint arg3, nint arg4)
-    {
-        Control(type, ControlIo.Read, arg1, arg2, arg3, arg4);
-    }
-
-    public void ControlRead(ControlType type, ReadOnlySpan<nint> arguments)
-    {
-        Control(type, ControlIo.Read, arguments);
-    }
-
-    public void ControlWrite(ControlType type)
-    {
-        Control(type, ControlIo.Write);
-    }
-
-    public void ControlWrite(ControlType type, nint arg1)
-    {
-        Control(type, ControlIo.Write, arg1);
-    }
-
-    public void ControlWrite(ControlType type, nint arg1, nint arg2)
-    {
-        Control(type, ControlIo.Write, arg1, arg2);
-    }
-
-    public void ControlWrite(ControlType type, nint arg1, nint arg2, nint arg3)
-    {
-        Control(type, ControlIo.Write, arg1, arg2, arg3);
-    }
-
-    public void ControlWrite(ControlType type, nint arg1, nint arg2, nint arg3, nint arg4)
-    {
-        Control(type, ControlIo.Write, arg1, arg2, arg3, arg4);
-    }
-
-    public void ControlWrite(ControlType type, ReadOnlySpan<nint> arguments)
-    {
-        Control(type, ControlIo.Write, arguments);
-    }
-
-    public void ControlReadWrite(ControlType type)
-    {
-        Control(type, ControlIo.ReadWrite);
-    }
-
-    public void ControlReadWrite(ControlType type, nint arg1)
-    {
-        Control(type, ControlIo.ReadWrite, arg1);
-    }
-
-    public void ControlReadWrite(ControlType type, nint arg1, nint arg2)
-    {
-        Control(type, ControlIo.ReadWrite, arg1, arg2);
-    }
-
-    public void ControlReadWrite(ControlType type, nint arg1, nint arg2, nint arg3)
-    {
-        Control(type, ControlIo.ReadWrite, arg1, arg2, arg3);
-    }
-
-    public void ControlReadWrite(ControlType type, nint arg1, nint arg2, nint arg3, nint arg4)
-    {
-        Control(type, ControlIo.ReadWrite, arg1, arg2, arg3, arg4);
-    }
-
-    public void ControlReadWrite(ControlType type, ReadOnlySpan<nint> arguments)
-    {
-        Control(type, ControlIo.ReadWrite, arguments);
-    }
-
-    public void ControlNone(ControlType type)
-    {
-        Control(type, ControlIo.None);
     }
 
     /// <summary>
@@ -342,28 +155,7 @@ public partial class Unicorn : IDisposable
     {
         EnsureNotDisposed();
 
-        var totalCount = _hookRegistry.Count;
-        var disposedCount = 0;
-
-        foreach (var registration in _hookRegistry.Values)
-        {
-            // Check if the registration is disposed by trying to access its handle
-            // We can't directly check _disposed as it's private, so we check if handle is empty
-            // and if the GCHandle is still allocated
-            try
-            {
-                if (registration.Handle.IsEmpty)
-                {
-                    disposedCount++;
-                }
-            }
-            catch
-            {
-                disposedCount++;
-            }
-        }
-
-        var isHealthy = disposedCount == 0;
+        var (isHealthy, disposedCount, totalCount) = _hooks.Validate();
 
         if (!isHealthy && Logger != null)
         {

@@ -8,12 +8,12 @@ namespace UnicornNet;
 /// </summary>
 public sealed class HookBuilder
 {
-    private readonly Unicorn _engine;
+    private readonly IHookManager _hooks;
     private readonly List<Unicorn.HookHandle> _handles = [];
 
-    internal HookBuilder(Unicorn engine)
+    internal HookBuilder(IHookManager hooks)
     {
-        _engine = engine;
+        _hooks = hooks;
     }
 
     /// <summary>
@@ -22,7 +22,7 @@ public sealed class HookBuilder
     public HookBuilder OnCode(Unicorn.CodeHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddCodeHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.Code, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -33,7 +33,7 @@ public sealed class HookBuilder
     public HookBuilder OnBlock(Unicorn.BlockHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddBlockHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.Block, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -44,7 +44,7 @@ public sealed class HookBuilder
     public HookBuilder OnMemoryRead(Unicorn.MemoryHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddMemReadHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.MemRead, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -55,7 +55,7 @@ public sealed class HookBuilder
     public HookBuilder OnMemoryWrite(Unicorn.MemoryHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddMemWriteHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.MemWrite, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -66,7 +66,7 @@ public sealed class HookBuilder
     public HookBuilder OnInterrupt(Unicorn.InterruptHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddInterruptHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.Interrupt, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -77,7 +77,7 @@ public sealed class HookBuilder
     public HookBuilder OnIn(Unicorn.InHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddInHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.Instruction, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -88,7 +88,7 @@ public sealed class HookBuilder
     public HookBuilder OnOut(Unicorn.OutHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddOutHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.Instruction, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -99,7 +99,7 @@ public sealed class HookBuilder
     public HookBuilder OnSyscall(Unicorn.SyscallHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddSyscallHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.Instruction, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -110,7 +110,7 @@ public sealed class HookBuilder
     public HookBuilder OnInvalidInstruction(Unicorn.InvalidInstructionHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddInvalidInstructionHook(callback, range, state);
+        var handle = _hooks.AddHook(Unicorn.HookType.InvalidInstruction, callback, range, state);
         _handles.Add(handle);
         return this;
     }
@@ -121,7 +121,7 @@ public sealed class HookBuilder
     public HookBuilder OnEventMem(Unicorn.HookType eventTypes, Unicorn.MemoryEventHook callback, Unicorn.HookRange? range = null, object? state = null)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        var handle = _engine.AddEventMemHook(eventTypes, callback, range, state);
+        var handle = _hooks.AddHook(eventTypes, callback, range, state);
         _handles.Add(handle);
         return this;
     }
